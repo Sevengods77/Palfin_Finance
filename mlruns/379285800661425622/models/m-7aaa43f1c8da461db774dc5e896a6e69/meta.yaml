@@ -1,0 +1,10 @@
+artifact_location: file:///S:/WasteOfWork/Privacy-Preserving-Federated-Learning-Model-For-Email-Spam-Detection/mlruns/379285800661425622/models/m-7aaa43f1c8da461db774dc5e896a6e69/artifacts
+creation_timestamp: 1763707283982
+experiment_id: '379285800661425622'
+last_updated_timestamp: 1763707295352
+model_id: m-7aaa43f1c8da461db774dc5e896a6e69
+model_type: null
+name: model
+source_run_id: 3d50fc0e4e77432eaaf01fc068b48c5d
+status: 2
+status_message: null

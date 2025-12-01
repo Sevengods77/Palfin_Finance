@@ -1,0 +1,6 @@
+artifact_location: file:///S:/WasteOfWork/Privacy-Preserving-Federated-Learning-Model-For-Email-Spam-Detection/mlruns/379285800661425622
+creation_time: 1763704566528
+experiment_id: '379285800661425622'
+last_update_time: 1763704566528
+lifecycle_stage: active
+name: Federated_Spam_Detection_GRU

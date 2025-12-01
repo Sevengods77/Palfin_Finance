@@ -1,15 +1,12 @@
-from keras.layers import SimpleRNN, LSTM, GRU, Embedding, Dense, Flatten
-from keras.models import Sequential
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.callbacks import TensorBoard
-from keras.utils import plot_model
-
-
+from tensorflow.keras.layers import SimpleRNN, LSTM, GRU, Embedding, Dense, Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.utils import plot_model
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
 
 def main(rnn_model):
     def email_to_array(eml):
@@ -93,14 +90,14 @@ def main(rnn_model):
     model.fit(emails_train, labels_train, epochs=10, batch_size=60, validation_split=0.2)
 
     # Testing the model
-    pred = model.predict_classes(emails_test)
+    pred = (model.predict(emails_test) > 0.5).astype("int32")
     acc = model.evaluate(emails_test, labels_test)
     print("Validation loss is {0:.2f} Accuracy is {1:.2f}  ".format(acc[0],acc[1]))
 
     # Constructing a custom message to check model
     custom_eml = 'Congratulations you have been 500 dollars for your entry in the movie'
     test_seq = email_to_array(custom_eml)
-    pred = model.predict_classes(test_seq)
+    pred = (model.predict(test_seq) > 0.5).astype("int32")
     print(pred)
 
 if __name__ == '__main__':

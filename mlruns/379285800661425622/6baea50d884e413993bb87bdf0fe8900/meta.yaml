@@ -1,0 +1,14 @@
+artifact_uri: file:///S:/WasteOfWork/Privacy-Preserving-Federated-Learning-Model-For-Email-Spam-Detection/mlruns/379285800661425622/6baea50d884e413993bb87bdf0fe8900/artifacts
+end_time: 1763704595122
+entry_point_name: ''
+experiment_id: '379285800661425622'
+lifecycle_stage: active
+run_id: 6baea50d884e413993bb87bdf0fe8900
+run_name: crawling-perch-268
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1763704568096
+status: 3
+tags: []
+user_id: shara

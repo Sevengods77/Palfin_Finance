@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  spam-detection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spam-detector
+    ports:
+      - "5001:5001"
+    volumes:
+      # Mount data directory for retraining capability
+      - ./Data:/app/Data
+      # Mount MLflow directory for experiment persistence
+      - ./mlruns:/app/mlruns
+      # Optional: Mount models for easy updates
+      - ./spam_model.pth:/app/spam_model.pth
+      - ./word_to_idx.json:/app/word_to_idx.json
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - spam-detection-network
+
+networks:
+  spam-detection-network:
+    driver: bridge

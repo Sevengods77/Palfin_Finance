@@ -1,0 +1,23 @@
+artifact_path: file:///S:/WasteOfWork/Privacy-Preserving-Federated-Learning-Model-For-Email-Spam-Detection/mlruns/379285800661425622/models/m-37c2cf67bcf8434a93f76ac43a3a0568/artifacts
+flavors:
+  python_function:
+    config:
+      device: null
+    data: data
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pytorch
+    pickle_module_name: mlflow.pytorch.pickle_module
+    python_version: 3.10.0
+  pytorch:
+    code: null
+    model_data: data
+    pytorch_version: 2.8.0+cpu
+mlflow_version: 3.6.0
+model_id: m-37c2cf67bcf8434a93f76ac43a3a0568
+model_size_bytes: 2612520
+model_uuid: m-37c2cf67bcf8434a93f76ac43a3a0568
+prompts: null
+run_id: 4930565e2ce1450d9e0b53b4f167c82d
+utc_time_created: '2025-11-21 06:39:58.010139'
