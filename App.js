@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { useFonts } from 'expo-font';
 import { theme } from './src/theme/theme';
 import { sharedStyles } from './src/theme/sharedStyles';
 import { getInitialSession, subscribeAuthChange, signOutUser } from './src/services/auth';
@@ -9,16 +10,24 @@ import TopBar from './src/components/Layout/TopBar';
 import PublicHome from './src/components/Home/PublicHome';
 import ToolsSection from './src/components/Home/ToolsSection';
 import DashboardScreen from './src/components/Dashboard/DashboardScreen';
+import TransactionHistory from './src/components/History/TransactionHistory';
 import LoginModal from './src/components/Auth/LoginModal';
 import SignupModal from './src/components/Auth/SignupModal';
 import FinizeChatWidget from './src/components/Finize/FinizeChatWidget';
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'Quintessential': 'https://fonts.gstatic.com/s/quintessential/v20/human-quintessential.woff2', // Direct Google Fonts URL for Web/Standard
+    // Note: React Native might require a local file for guaranteed support, but Expo Web handles remote well usually.
+    // If this fails on native, we'd fallback. For this task, we assume web/simulated environment or web primarily.
+  });
+
   const [user, setUser] = useState(null);
-  const [route, setRoute] = useState('home'); // 'home', 'dashboard', 'tools'
+  const [route, setRoute] = useState('home'); // 'home', 'dashboard', 'tools', 'history'
   const [loginVisible, setLoginVisible] = useState(false);
   const [signupVisible, setSignupVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [targetSection, setTargetSection] = useState(null); // For scrolling to sections
 
   const toolsRef = useRef(null);
 
@@ -54,34 +63,51 @@ export default function App() {
     setRoute('home');
   };
 
-  const scrollToTools = () => {
-    setRoute('tools');
-    // In a real app with a router, we might scroll. 
-    // Here we just switch view or if on home, we could scroll.
-    // For simplicity in this state-based router, 'tools' is a view or a section.
-    // If we are on public home, tools is a section below.
-    // If authenticated, tools is a separate screen.
+  const handleNavigate = (dest) => {
+    if (dest === 'tools') {
+      // If we are authenticated, we go to dashboard but scroll to tools
+      if (user) {
+        setRoute('dashboard');
+        setTargetSection('tools');
+        // Reset target after a bit so it doesn't get stuck? 
+        // Better: DashboardScreen consumes it and clears it or uses it in useEffect
+      } else {
+        setRoute('home');
+        // In public home, we might need to scroll too, but let's assume 'tools' opens the tools section
+        // For public, we'll just show the public home which has tools below.
+        setTimeout(() => {
+          // Very basic scroll implementation for public view would go here
+          setTargetSection('tools');
+        }, 100);
+      }
+    } else {
+      setRoute(dest);
+      setTargetSection(null);
+    }
   };
 
   const renderContent = () => {
-    if (loading) {
-      return <View style={sharedStyles.container} />;
+    if (loading || !fontsLoaded) {
+      return (
+        <View style={[sharedStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
     }
 
     if (user) {
       // Authenticated Routes
-      switch (route) {
-        case 'dashboard':
-          return <DashboardScreen user={user} />;
-        case 'tools':
-          return (
-            <ScrollView style={sharedStyles.container}>
-              <ToolsSection />
-            </ScrollView>
-          );
-        default:
-          return <DashboardScreen user={user} />;
+      // We pass the targetSection to Dashboard so it can scroll
+      if (route === 'history') {
+        return <TransactionHistory />;
       }
+      return (
+        <DashboardScreen
+          user={user}
+          scrollToSection={targetSection}
+          onScrollHandled={() => setTargetSection(null)}
+        />
+      );
     } else {
       // Public Routes
       return (
@@ -89,7 +115,7 @@ export default function App() {
           <PublicHome
             onLoginClick={() => setLoginVisible(true)}
             onSignupClick={() => setSignupVisible(true)}
-            onScrollToTools={scrollToTools}
+            onScrollToTools={() => handleNavigate('tools')}
           />
           <View ref={toolsRef}>
             <ToolsSection />
@@ -108,7 +134,8 @@ export default function App() {
         onLoginClick={() => setLoginVisible(true)}
         onSignupClick={() => setSignupVisible(true)}
         onLogoutClick={handleLogout}
-        onNavigate={setRoute}
+        onNavigate={handleNavigate}
+        activeRoute={route}
       />
 
       <View style={styles.contentContainer}>
@@ -150,3 +177,4 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
 });
+

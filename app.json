@@ -24,6 +24,9 @@
     },
     "web": {
       "favicon": "./assets/Palfin_logo.png"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

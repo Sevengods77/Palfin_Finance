@@ -26,16 +26,19 @@ export const theme = {
     },
     typography: {
         h1: {
+            fontFamily: '"Quintessential", serif',
             fontSize: 32,
-            fontWeight: 'bold',
+            fontWeight: '400', // Quintessential is decorative, often looks better with normal weight
             color: '#F8FAFC',
         },
         h2: {
+            fontFamily: '"Quintessential", serif',
             fontSize: 24,
-            fontWeight: 'bold',
+            fontWeight: '400',
             color: '#F8FAFC',
         },
         h3: {
+            fontFamily: '"Quintessential", serif',
             fontSize: 20,
             fontWeight: '600',
             color: '#F8FAFC',

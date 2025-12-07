@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, LayoutAnimation } from 'react-native';
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
-import { getMonthlySpend, getTransactions, addTransaction } from '../../services/transactionService';
+import { getMonthlySpend, getDashboardData, addTransaction, subscribeToStore } from '../../services/transactionService';
 import { getUserStats } from '../../services/gamificationService';
 import { getDailyTip } from '../../services/coachService';
+import SMSExtractor from '../Tools/SMSExtractor';
 
 const StatCard = ({ title, value, subtext, color }) => (
     <View style={[sharedStyles.card, styles.statCard]}>
@@ -14,10 +15,10 @@ const StatCard = ({ title, value, subtext, color }) => (
     </View>
 );
 
-const FeatureCard = ({ title, icon, onPress }) => (
-    <TouchableOpacity onPress={onPress} style={[sharedStyles.card, styles.featureCard]}>
+const FeatureCard = ({ title, icon, onPress, isActive }) => (
+    <TouchableOpacity onPress={onPress} style={[sharedStyles.card, styles.featureCard, isActive && styles.activeFeatureCard]}>
         <Text style={styles.featureIcon}>{icon}</Text>
-        <Text style={styles.featureTitle}>{title}</Text>
+        <Text style={[styles.featureTitle, isActive && styles.activeFeatureTitle]}>{title}</Text>
     </TouchableOpacity>
 );
 
@@ -30,49 +31,108 @@ const ProgressBar = ({ progress }) => (
     </View>
 );
 
-const DashboardScreen = ({ user }) => {
+const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
     const [loading, setLoading] = useState(true);
-    const [monthlySpend, setMonthlySpend] = useState(0);
+    const [dashboardData, setDashboardData] = useState({
+        balance: 0,
+        monthlyExpenses: 0,
+        daysTracked: 0,
+        transactionCount: 0,
+        savingsRate: 0,
+    });
     const [stats, setStats] = useState({ streak: 0, points: 0 });
     const [dailyTip, setDailyTip] = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [showExtractor, setShowExtractor] = useState(false);
 
-    const loadData = async () => {
-        try {
-            const [spend, userStats, tip] = await Promise.all([
-                getMonthlySpend(),
-                getUserStats(),
-                getDailyTip(),
-            ]);
-            setMonthlySpend(spend);
-            setStats(userStats);
-            setDailyTip(tip);
-        } catch (error) {
-            console.error('Error loading dashboard data:', error);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
+    // Scrolling refs
+    const scrollViewRef = useRef(null);
+    const toolsRef = useRef(null);
+    const sectionLayouts = useRef({});
 
     useEffect(() => {
-        loadData();
+        // Subscribe to store updates
+        const unsubscribe = subscribeToStore((data) => {
+            setDashboardData(data);
+        });
+
+        // Initial Data Load (Gamification/Coach services are still mock/async)
+        const loadExtras = async () => {
+            try {
+                const [userStats, tip] = await Promise.all([
+                    getUserStats(),
+                    getDailyTip(),
+                ]);
+                setStats(userStats);
+                setDailyTip(tip);
+            } catch (error) {
+                console.error('Error loading extra dashboard data:', error);
+            } finally {
+                setLoading(false);
+                setRefreshing(false);
+            }
+        };
+
+        loadExtras();
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
-    const onRefresh = () => {
+    // Handle Scrolling
+    useEffect(() => {
+        if (scrollToSection && scrollViewRef.current) {
+            const y = sectionLayouts.current[scrollToSection];
+            if (y !== undefined) {
+                scrollViewRef.current.scrollTo({ y, animated: true });
+                if (onScrollHandled) onScrollHandled();
+            } else {
+                // If layout not ready or section not found, maybe wait?
+                // For now, retry once or just ignore. 
+                // A small timeout helps if layout hasn't measured yet on first render
+                setTimeout(() => {
+                    const retryY = sectionLayouts.current[scrollToSection];
+                    if (retryY !== undefined && scrollViewRef.current) {
+                        scrollViewRef.current.scrollTo({ y: retryY, animated: true });
+                        if (onScrollHandled) onScrollHandled();
+                    }
+                }, 500);
+            }
+        }
+    }, [scrollToSection]);
+
+    const onRefresh = async () => {
         setRefreshing(true);
-        loadData();
+        // Re-fetch extras
+        const [userStats, tip] = await Promise.all([
+            getUserStats(),
+            getDailyTip(),
+        ]);
+        setStats(userStats);
+        setDailyTip(tip);
+        setRefreshing(false);
     };
 
     const handleSimulateTransaction = async () => {
         // Simulate adding a transaction for demo purposes
-        await addTransaction(Math.floor(Math.random() * 500) + 50, 'Coffee & Snacks');
-        loadData();
+        await addTransaction(Math.floor(Math.random() * 500) + 50, 'Coffee & Snacks Test');
         alert('Simulated transaction added! Dashboard updated.');
+    };
+
+    const toggleExtractor = () => {
+        // Simple layout animation if supported (LayoutAnimation on Android needs setup, usually works on iOS/Web or ignored)
+        // LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setShowExtractor(!showExtractor);
+    };
+
+    const handleLayout = (sectionName, event) => {
+        sectionLayouts.current[sectionName] = event.nativeEvent.layout.y;
     };
 
     return (
         <ScrollView
+            ref={scrollViewRef}
             style={sharedStyles.container}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
@@ -92,14 +152,20 @@ const DashboardScreen = ({ user }) => {
 
                 <View style={styles.statsGrid}>
                     <StatCard
+                        title="Current Balance"
+                        value={`₹${(dashboardData.balance || 0).toLocaleString('en-IN')}`}
+                        subtext="Available to spend"
+                        color={theme.colors.text}
+                    />
+                    <StatCard
                         title="Monthly Spend"
-                        value={`₹${monthlySpend.toLocaleString('en-IN')}`}
+                        value={`₹${(dashboardData.monthlyExpenses || 0).toLocaleString('en-IN')}`}
                         subtext="▼ 12% from last month"
                         color={theme.colors.primary}
                     />
                     <StatCard
-                        title="Total Savings"
-                        value="₹8,500"
+                        title="Savings Rate"
+                        value={`${dashboardData.savingsRate}%`}
                         subtext="On track for goal"
                         color={theme.colors.accent}
                     />
@@ -114,23 +180,42 @@ const DashboardScreen = ({ user }) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionHeader}>Budget Progress</Text>
                     <View style={sharedStyles.card}>
-                        <ProgressBar progress={65} />
+                        <ProgressBar progress={30} />
                     </View>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Quick Actions</Text>
+                {/* Tools Section - Target for scrolling */}
+                <View
+                    style={styles.section}
+                    onLayout={(e) => handleLayout('tools', e)}
+                    ref={toolsRef} // Also keeping ref just in case
+                >
+                    <Text style={styles.sectionHeader}>Tools</Text>
+
                     <View style={styles.featuresGrid}>
                         <FeatureCard
-                            title="Simulate SMS"
+                            title="TransExtract"
                             icon="📱"
-                            onPress={handleSimulateTransaction}
+                            onPress={toggleExtractor}
+                            isActive={showExtractor}
                         />
                         <FeatureCard title="View Categories" icon="🏷️" onPress={() => { }} />
                         <FeatureCard title="Behavioral Coach" icon="🤖" onPress={() => { }} />
                         <FeatureCard title="Savings Goals" icon="🎯" onPress={() => { }} />
                     </View>
+
+                    {/* Embedded SMS Extractor (Conditional) */}
+                    {showExtractor && (
+                        <View style={{ marginTop: theme.spacing.m }}>
+                            <SMSExtractor />
+                        </View>
+                    )}
                 </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.lastUpdated}>Last updated: {new Date(dashboardData.lastUpdated).toLocaleString()}</Text>
+                </View>
+
             </View>
         </ScrollView>
     );
@@ -220,6 +305,12 @@ const styles = StyleSheet.create({
         padding: theme.spacing.l,
         aspectRatio: 1.2,
         justifyContent: 'center',
+        borderColor: theme.colors.border,
+        borderWidth: 1,
+    },
+    activeFeatureCard: {
+        borderColor: theme.colors.primary,
+        backgroundColor: 'rgba(34, 197, 94, 0.05)',
     },
     featureIcon: {
         fontSize: 32,
@@ -229,6 +320,15 @@ const styles = StyleSheet.create({
         color: theme.colors.text,
         fontWeight: '600',
         textAlign: 'center',
+    },
+    activeFeatureTitle: {
+        color: theme.colors.primary,
+    },
+    lastUpdated: {
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        fontSize: 12,
+        fontStyle: 'italic',
     },
 });
 

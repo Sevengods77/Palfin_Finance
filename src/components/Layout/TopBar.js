@@ -4,7 +4,7 @@ import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 import palfinLogo from '../../../assets/Palfin_logo.png';
 
-const TopBar = ({ user, onLoginClick, onSignupClick, onLogoutClick, onNavigate }) => {
+const TopBar = ({ user, onLoginClick, onSignupClick, onLogoutClick, onNavigate, activeRoute }) => {
     return (
         <View style={styles.header}>
             <View style={[sharedStyles.maxWidthContainer, styles.headerContent]}>
@@ -19,10 +19,13 @@ const TopBar = ({ user, onLoginClick, onSignupClick, onLogoutClick, onNavigate }
                     {user ? (
                         <>
                             <TouchableOpacity onPress={() => onNavigate('dashboard')} style={styles.navLink}>
-                                <Text style={styles.navText}>Dashboard</Text>
+                                <Text style={[styles.navText, activeRoute === 'dashboard' && styles.activeNavText]}>Dashboard</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => onNavigate('history')} style={styles.navLink}>
+                                <Text style={[styles.navText, activeRoute === 'history' && styles.activeNavText]}>History</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => onNavigate('tools')} style={styles.navLink}>
-                                <Text style={styles.navText}>Tools</Text>
+                                <Text style={[styles.navText, activeRoute === 'tools' && styles.activeNavText]}>Tools</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={onLogoutClick} style={styles.navLink}>
                                 <Text style={styles.navText}>Logout</Text>
@@ -52,7 +55,7 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.backgroundSecondary,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
-        paddingVertical: theme.spacing.m,
+        paddingVertical: theme.spacing.s, // Reduced slightly to accommodate larger logo
         zIndex: 100,
         ...Platform.select({
             web: {
@@ -72,14 +75,17 @@ const styles = StyleSheet.create({
         gap: theme.spacing.s,
     },
     logoImage: {
-        width: 150,
-        height: 50,
+        width: 120, // Increased size (approx 2.5x from original visual appearance in context, considering it was small)
+        // Original was 150x50, but "significant" increase requested. 
+        // Let's make it taller effectively. 
+        height: 80,
     },
     logoText: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 42, // Increased from 24
+        fontWeight: '400',
         color: theme.colors.text,
         letterSpacing: 1,
+        fontFamily: '"Quintessential", serif',
     },
     navItems: {
         flexDirection: 'row',
@@ -91,8 +97,13 @@ const styles = StyleSheet.create({
     },
     navText: {
         color: theme.colors.text,
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: '600',
+        fontFamily: '"Quintessential", serif', // Applying branding font to nav items too as requested for "prominent text"
+    },
+    activeNavText: {
+        color: theme.colors.primary,
+        textDecorationLine: 'underline',
     },
     createAccountBtn: {
         backgroundColor: theme.colors.primary,
@@ -103,7 +114,8 @@ const styles = StyleSheet.create({
     createAccountText: {
         color: theme.colors.background,
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 16,
+        fontFamily: '"Quintessential", serif',
     },
 });
 

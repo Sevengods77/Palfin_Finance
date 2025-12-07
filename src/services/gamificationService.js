@@ -1,9 +1,9 @@
 // Mock gamification state
 let userStats = {
-    streak: 12, // days
-    points: 450,
+    streak: 2, // days
+    points: 50,
     level: 'Saver Scout',
-    badges: ['First Save', 'Budget Boss'],
+    badges: [],
 };
 
 export const getUserStats = () => {
