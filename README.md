@@ -1,48 +1,36 @@
-# 💰 Palfin - Intelligent Personal Finance Manager
+# 💰 Palfin: Personal Finance Management App
 
-A comprehensive personal finance application that leverages AI-powered transaction extraction, SMS parsing, and real-time financial analytics to help users in India manage their money efficiently.
-
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)
-![Status](https://img.shields.io/badge/status-Active%20Development-yellow)
+**Palfin** is a cross-platform mobile and web application built with **React Native (Expo)** designed to help users manage their personal finances, track transactions, and visualize their spending habits. It provides an interactive dashboard and uses **Supabase** for secure backend authentication and data management.
 
 ---
 
-## 📋 Table of Contents
+## ✨ Features
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Setup & Installation](#setup--installation)
-- [Configuration](#configuration)
-- [Core Features Documentation](#core-features-documentation)
-- [SMS Extractor Tool](#sms-extractor-tool)
-- [Dashboard & Metrics](#dashboard--metrics)
-- [Finize Chatbot](#finize-chatbot)
-- [Transaction Simulation](#transaction-simulation)
-- [Database Schema](#database-schema)
-- [API Documentation](#api-documentation)
-- [Styling & Typography](#styling--typography)
-- [Authentication](#authentication)
-- [Deployment](#deployment)
-- [Development Workflow](#development-workflow)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [License](#license)
+* **User Authentication:** Secure signup, login, and session management using **Supabase Auth**.
+* **Interactive Dashboard:** Provides a clear, at-a-glance overview of the user's current balance, monthly expenses, savings rate, and key financial metrics, driven by `dashboardData.json` (mock data).
+* **Transaction Tracking:** Allows users to view a detailed history of their financial transactions (`TransactionHistory`).
+* **Navigation:** Seamless routing between `home`, `dashboard`, `tools`, and `history` managed within `App.js`.
+* **Cross-Platform UI:** Built with **Expo** to ensure a consistent experience across iOS, Android, and Web. 
 
 ---
 
-## 🎯 Overview
+## 🛠️ Technology Stack
 
-**Palfin** is an intelligent personal finance management application specifically designed for Indian users. It automates transaction tracking through SMS extraction, provides real-time financial insights, and offers AI-powered financial advice through a behavioral finance chatbot.
+| Category | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Frontend Framework** | **React Native (Expo)** | ~54.0.25 | Cross-platform development environment. |
+| **Backend & Database** | **Supabase** (`@supabase/supabase-js`) | ^2.86.0 | Authentication, real-time database, and services. |
+| **React** | **`react`** / **`react-native`** | 19.1.0 / 0.81.5 | Core UI library. |
+| **Storage** | **`@react-native-async-storage/async-storage`** | ^2.2.0 | Local data persistence for user session and key values. |
+| **Styling/Theme** | **`theme.js` & `sharedStyles.js`** | N/A | Centralized design system and custom fonts (e.g., 'Quintessential'). |
 
-### Current Version Features (v1.0.0)
-- ✅ SMS-based transaction extraction (Indian banking formats)
-- ✅ Real-time dashboard with dynamic metrics
-- ✅ JSON-based data persistence (dashboardData.json)
-- ✅ Cloud authentication (Supabase)
-- ✅ AI financial advisor chatbot (Finize) using Google Gemini
-- ✅ Transaction history and categor
+---
+
+## 🚀 Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing.
+
+### Prerequisites
+
+You must have **Node.js** and the **Expo CLI** installed globally.
+
