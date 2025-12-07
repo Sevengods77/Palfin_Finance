@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, LayoutAnimation } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, Modal, SafeAreaView } from 'react-native';
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { getMonthlySpend, getDashboardData, addTransaction, subscribeToStore } from '../../services/transactionService';
@@ -121,8 +121,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
     };
 
     const toggleExtractor = () => {
-        // Simple layout animation if supported (LayoutAnimation on Android needs setup, usually works on iOS/Web or ignored)
-        // LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setShowExtractor(!showExtractor);
     };
 
@@ -196,25 +194,38 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                         <FeatureCard
                             title="TransExtract"
                             icon="📱"
-                            onPress={toggleExtractor}
+                            onPress={() => setShowExtractor(true)}
                             isActive={showExtractor}
                         />
                         <FeatureCard title="View Categories" icon="🏷️" onPress={() => { }} />
                         <FeatureCard title="Behavioral Coach" icon="🤖" onPress={() => { }} />
                         <FeatureCard title="Savings Goals" icon="🎯" onPress={() => { }} />
                     </View>
-
-                    {/* Embedded SMS Extractor (Conditional) */}
-                    {showExtractor && (
-                        <View style={{ marginTop: theme.spacing.m }}>
-                            <SMSExtractor />
-                        </View>
-                    )}
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.lastUpdated}>Last updated: {new Date(dashboardData.lastUpdated).toLocaleString()}</Text>
                 </View>
+
+                {/* SMS Extractor Modal */}
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showExtractor}
+                    onRequestClose={() => setShowExtractor(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Extract Transaction</Text>
+                                <TouchableOpacity onPress={() => setShowExtractor(false)} style={styles.closeButton}>
+                                    <Text style={styles.closeButtonText}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <SMSExtractor />
+                        </View>
+                    </View>
+                </Modal>
 
             </View>
         </ScrollView>
@@ -329,6 +340,42 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 12,
         fontStyle: 'italic',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing.m,
+    },
+    modalContent: {
+        backgroundColor: theme.colors.background,
+        borderRadius: theme.borderRadius.l,
+        padding: theme.spacing.l, // Removed padding to let children control it or keep it? SMSExtractor has its own padding/card style.
+        // Actually SMSExtractor is a Card. Let's make it fit well.
+        width: '100%',
+        maxWidth: 500,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.m,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+    },
+    closeButton: {
+        padding: theme.spacing.s,
+    },
+    closeButtonText: {
+        fontSize: 24,
+        color: theme.colors.textSecondary,
+        lineHeight: 24,
     },
 });
 

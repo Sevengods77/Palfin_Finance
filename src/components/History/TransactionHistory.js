@@ -16,8 +16,8 @@ const getAvatarColor = (name) => {
 
 const TransactionCard = ({ transaction }) => {
     const isCredit = transaction.type === 'credit' || transaction.category === 'Income';
-    const amountColor = isCredit ? '#10B981' : theme.colors.text; // Green for credit, white for debit
-    const sign = isCredit ? '+' : '';
+    const amountColor = isCredit ? '#22C55E' : '#EF4444'; // Green for credit, Red for debit
+    const sign = isCredit ? '+' : '-';
 
     // Format date: "Oct 25" or "Today"
     const dateObj = new Date(transaction.date);
@@ -46,19 +46,45 @@ const TransactionCard = ({ transaction }) => {
     );
 };
 
+const SummaryBlock = ({ label, amount, color }) => (
+    <View style={styles.summaryBlock}>
+        <Text style={styles.summaryLabel}>{label}</Text>
+        <Text style={[styles.summaryAmount, { color }]}>₹{amount.toLocaleString('en-IN')}</Text>
+    </View>
+);
+
 const TransactionHistory = () => {
     const [transactions, setTransactions] = useState([]);
+    const [summary, setSummary] = useState({ spent: 0, credited: 0 });
 
     useEffect(() => {
         // Initial fetch
-        getTransactions().then(setTransactions);
+        getTransactions().then(updatedTransactions => {
+            setTransactions(updatedTransactions);
+            calculateSummary(updatedTransactions);
+        });
 
         // Subscribe for real-time updates
         const unsubscribe = subscribeToStore((store) => {
             setTransactions([...store.transactions]);
+            calculateSummary(store.transactions);
         });
         return () => unsubscribe();
     }, []);
+
+    const calculateSummary = (txns) => {
+        let spent = 0;
+        let credited = 0;
+        txns.forEach(t => {
+            // Check type or category
+            if (t.type === 'credit' || t.category === 'Income') {
+                credited += t.amount;
+            } else {
+                spent += t.amount;
+            }
+        });
+        setSummary({ spent, credited });
+    };
 
     // Grouping logic (optional, but requested "nice way like gpay")
     // Simple chronological sort first
@@ -74,7 +100,12 @@ const TransactionHistory = () => {
             <View style={[sharedStyles.maxWidthContainer, styles.content]}>
                 <View style={styles.header}>
                     <Text style={sharedStyles.title}>Transaction History</Text>
-                    <Text style={sharedStyles.subtitle}>Your recent activity</Text>
+                </View>
+
+                {/* Summary Section */}
+                <View style={styles.summaryContainer}>
+                    <SummaryBlock label="Total Spent" amount={summary.spent} color="#EF4444" />
+                    <SummaryBlock label="Total Credited" amount={summary.credited} color="#22C55E" />
                 </View>
 
                 {sortedTransactions.length === 0 ? (
@@ -84,6 +115,7 @@ const TransactionHistory = () => {
                     </View>
                 ) : (
                     <View style={styles.list}>
+                        <Text style={styles.listHeader}>Recent Activity</Text>
                         {sortedTransactions.map((t) => (
                             <TransactionCard key={t.id} transaction={t} />
                         ))}
@@ -99,11 +131,41 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing.l,
     },
     header: {
-        marginBottom: theme.spacing.l,
+        marginBottom: theme.spacing.m,
         alignItems: 'center',
+    },
+    summaryContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: theme.spacing.xl,
+        gap: theme.spacing.m,
+    },
+    summaryBlock: {
+        flex: 1,
+        backgroundColor: theme.colors.backgroundSecondary,
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.l,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+    },
+    summaryLabel: {
+        color: theme.colors.textSecondary,
+        marginBottom: theme.spacing.xs,
+        fontSize: 14,
+    },
+    summaryAmount: {
+        fontSize: 20,
+        fontWeight: 'bold',
     },
     list: {
         gap: theme.spacing.s,
+    },
+    listHeader: {
+        color: theme.colors.textSecondary,
+        marginBottom: theme.spacing.s,
+        marginLeft: theme.spacing.xs,
+        fontWeight: '600',
     },
     card: {
         flexDirection: 'row',
@@ -113,9 +175,7 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.backgroundSecondary,
         borderRadius: theme.borderRadius.l,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border, // Very subtle separator feel
-        // GPay is often cleaner, maybe no background but just list items? 
-        // Let's keep card bg for contrast against dark theme.
+        borderBottomColor: theme.colors.border,
     },
     leftSection: {
         flexDirection: 'row',

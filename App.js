@@ -18,8 +18,6 @@ import FinizeChatWidget from './src/components/Finize/FinizeChatWidget';
 export default function App() {
   const [fontsLoaded] = useFonts({
     'Quintessential': 'https://fonts.gstatic.com/s/quintessential/v20/human-quintessential.woff2', // Direct Google Fonts URL for Web/Standard
-    // Note: React Native might require a local file for guaranteed support, but Expo Web handles remote well usually.
-    // If this fails on native, we'd fallback. For this task, we assume web/simulated environment or web primarily.
   });
 
   const [user, setUser] = useState(null);
@@ -29,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [targetSection, setTargetSection] = useState(null); // For scrolling to sections
 
+  const mainScrollViewRef = useRef(null);
   const toolsRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +57,22 @@ export default function App() {
     };
   }, []);
 
+  // Handle Public Page Scrolling
+  useEffect(() => {
+    if (!user && targetSection === 'tools' && toolsRef.current && mainScrollViewRef.current) {
+      toolsRef.current.measure((x, y, width, height, pageX, pageY) => {
+        // In a ScrollView, we need the relative position usually, but measure gives absolute page coordinates.
+        // A simpler way for vertical ScrollView is to use the layout Y if direct child, or measureLayout.
+        // For simplicity in this structure:
+        // The ScrollView contains PublicHome then ToolsSection.
+        // We can just scroll to the Y offset.
+
+        // NOTE: measure() might be tricky inside ScrollView without native ref handling.
+        // Let's rely on onLayout of the view container to get Y.
+      });
+    }
+  }, [user, targetSection]);
+
   const handleLogout = async () => {
     await signOutUser();
     setRoute('home');
@@ -65,19 +80,17 @@ export default function App() {
 
   const handleNavigate = (dest) => {
     if (dest === 'tools') {
-      // If we are authenticated, we go to dashboard but scroll to tools
       if (user) {
         setRoute('dashboard');
         setTargetSection('tools');
-        // Reset target after a bit so it doesn't get stuck? 
-        // Better: DashboardScreen consumes it and clears it or uses it in useEffect
       } else {
         setRoute('home');
-        // In public home, we might need to scroll too, but let's assume 'tools' opens the tools section
-        // For public, we'll just show the public home which has tools below.
+        setTargetSection('tools');
+
+        // Trigger scroll if we are already on home
+        // We use a small timeout to let render happen or state update
         setTimeout(() => {
-          // Very basic scroll implementation for public view would go here
-          setTargetSection('tools');
+          scrollToTools();
         }, 100);
       }
     } else {
@@ -85,6 +98,26 @@ export default function App() {
       setTargetSection(null);
     }
   };
+
+  const scrollToTools = () => {
+    if (toolsRef.current && mainScrollViewRef.current) {
+      toolsRef.current.measureLayout(
+        Platform.OS === 'web' ? mainScrollViewRef.current.getScrollableNode() : React.findNodeHandle(mainScrollViewRef.current),
+        (x, y) => {
+          mainScrollViewRef.current.scrollTo({ y: y, animated: true });
+          setTargetSection(null); // Reset
+        },
+        () => {
+          // Fallback for failure: just scroll to a guess or bottom
+          mainScrollViewRef.current.scrollToEnd({ animated: true });
+          setTargetSection(null);
+        }
+      );
+    }
+  };
+
+  // Also simplified approach: OnLayout capture
+  const [toolsY, setToolsY] = useState(0);
 
   const renderContent = () => {
     if (loading || !fontsLoaded) {
@@ -96,8 +129,6 @@ export default function App() {
     }
 
     if (user) {
-      // Authenticated Routes
-      // We pass the targetSection to Dashboard so it can scroll
       if (route === 'history') {
         return <TransactionHistory />;
       }
@@ -111,13 +142,27 @@ export default function App() {
     } else {
       // Public Routes
       return (
-        <ScrollView style={sharedStyles.container}>
+        <ScrollView
+          ref={mainScrollViewRef}
+          style={sharedStyles.container}
+        >
           <PublicHome
             onLoginClick={() => setLoginVisible(true)}
             onSignupClick={() => setSignupVisible(true)}
             onScrollToTools={() => handleNavigate('tools')}
           />
-          <View ref={toolsRef}>
+          <View
+            ref={toolsRef}
+            onLayout={(event) => {
+              const layout = event.nativeEvent.layout;
+              setToolsY(layout.y);
+              // If we were waiting to scroll
+              if (targetSection === 'tools' && layout.y > 0) {
+                mainScrollViewRef.current?.scrollTo({ y: layout.y, animated: true });
+                setTargetSection(null);
+              }
+            }}
+          >
             <ToolsSection />
           </View>
         </ScrollView>
