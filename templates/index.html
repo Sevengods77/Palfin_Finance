@@ -4,335 +4,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spam Detection AI</title>
+    <title>Palfin Security - Spam Detection AI</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #10b981;
-            --danger: #f43f5e;
-            --text: #1e293b;
-            --text-light: #64748b;
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.5);
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            margin: 0;
-            padding: 2rem;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            color: var(--text);
-        }
-
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-            position: relative;
-            z-index: 10;
-        }
-
-        .header h1 {
-            font-size: 3.5rem;
-            color: white;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            font-weight: 700;
-            letter-spacing: -1px;
-        }
-
-        .header p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 1.25rem;
-            font-weight: 300;
-        }
-
-        .main-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2.5rem;
-            width: 100%;
-            max-width: 1200px;
-            z-index: 10;
-        }
-
-        @media (max-width: 900px) {
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 2.5rem;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .card:hover {
-            transform: translateY(-5px) scale(1.01);
-            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            color: var(--primary-dark);
-        }
-
-        textarea {
-            width: 100%;
-            height: 180px;
-            padding: 1.25rem;
-            border: 2px solid transparent;
-            border-radius: 16px;
-            resize: vertical;
-            font-family: inherit;
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
-            box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.5);
-            transition: all 0.3s ease;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        textarea:focus {
-            outline: none;
-            background: white;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
-        }
-
-        button {
-            width: 100%;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.75rem;
-            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.5);
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        #result {
-            margin-top: 2rem;
-            padding: 2rem;
-            border-radius: 16px;
-            text-align: center;
-            display: none;
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .result-spam {
-            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-            border: 1px solid #fecdd3;
-            color: var(--danger);
-        }
-
-        .result-ham {
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            border: 1px solid #a7f3d0;
-            color: var(--secondary);
-        }
-
-        .prediction-text {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-
-        .confidence-bar-bg {
-            width: 100%;
-            height: 12px;
-            background-color: rgba(0, 0, 0, 0.05);
-            border-radius: 6px;
-            margin-top: 1.5rem;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .confidence-bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .confidence-bar-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(45deg,
-                    rgba(255, 255, 255, 0.2) 25%,
-                    transparent 25%,
-                    transparent 50%,
-                    rgba(255, 255, 255, 0.2) 50%,
-                    rgba(255, 255, 255, 0.2) 75%,
-                    transparent 75%,
-                    transparent);
-            background-size: 20px 20px;
-            animation: moveStripes 1s linear infinite;
-        }
-
-        @keyframes moveStripes {
-            0% {
-                background-position: 0 0;
-            }
-
-            100% {
-                background-position: 20px 20px;
-            }
-        }
-
-        .charts-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2.5rem;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 280px;
-            width: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
-    <div class="header">
-        <h1><i class="fas fa-shield-virus"></i> Spam Detection AI</h1>
-        <p>Advanced Privacy-Preserving Federated Learning Model</p>
+
+    <!-- Header / Nav -->
+    <div
+        style="position: absolute; top: 0; left: 0; right: 0; padding: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;">
+        <div style="font-family: 'Quintessential', cursive; font-size: 24px; color: var(--text);">Palfin</div>
+        <div>
+            <button class="btn btn-secondary" onclick="openModal('loginModal')" id="loginBtn">Login</button>
+            <button class="btn btn-primary" onclick="logout()" id="logoutBtn" style="display: none;">Logout</button>
+        </div>
     </div>
 
-    <div class="main-container">
-        <!-- Input Section -->
-        <div class="card">
-            <div class="card-title">
-                <i class="fas fa-robot"></i> AI Analysis
-            </div>
-            <textarea id="emailInput" placeholder="Paste the email content here to analyze..."></textarea>
-            <button onclick="detectSpam()" id="predictBtn">
-                <i class="fas fa-bolt"></i> Analyze Email
-            </button>
+    <!-- Hero Section (Palfin UI) -->
+    <section class="hero-section" id="hero">
+        <h1 class="hero-title text-center">
+            Master Your Security with <span class="highlight">Palfin</span>
+        </h1>
+        <p class="hero-subtitle text-center">
+            AI-powered threat detection. Track, analyze, and secure your communications with intelligent insights.
+        </p>
 
-            <div id="result">
-                <div class="prediction-text" id="predictionText"></div>
-                <div id="confidenceText" style="font-weight: 600; opacity: 0.8;"></div>
-                <div class="confidence-bar-bg">
-                    <div class="confidence-bar-fill" id="confidenceBar"></div>
+        <div class="hero-cta">
+            <button class="btn btn-primary" onclick="openModal('signupModal')">
+                <i class="fas fa-shield-alt"></i> Get Started Free
+            </button>
+            <button class="btn btn-secondary" onclick="openModal('loginModal')">
+                <i class="fas fa-user"></i> Login
+            </button>
+        </div>
+
+        <div class="scroll-indicator"
+            onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+            Explore Features ↓
+        </div>
+    </section>
+
+    <!-- Main App Section (Hidden until Login for effect, or shown as demo) -->
+    <!-- For this demo, we make it accessible but emphasize the "Dashboard" feel -->
+
+    <!-- Tools Section (Palfin UI) -->
+    <section id="features" class="tools-section">
+        <div class="container">
+            <h2 class="section-title">Tools & Features</h2>
+            <p class="section-subtitle">
+                Everything you need to take control of your digital safety.
+            </p>
+
+            <div class="tools-grid">
+                <div class="tool-card">
+                    <div class="tool-icon">📊</div>
+                    <div class="tool-title">Real-time Analysis</div>
+                    <p class="tool-desc">Automatically parse and categorize emails to detect threats instantly.</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">🧠</div>
+                    <div class="tool-title">Smart Learning</div>
+                    <p class="tool-desc">Federated learning improves accuracy without compromising privacy.</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">🤖</div>
+                    <div class="tool-title">AI Powered</div>
+                    <p class="tool-desc">Advanced GRU and Neural Networks identify complex patterns.</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">🔒</div>
+                    <div class="tool-title">Private by Design</div>
+                    <p class="tool-desc">Your data stays on your device. Only model updates are shared.</p>
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- Dashboard Section -->
-        <div class="charts-container">
-            <div class="card">
-                <div class="card-title">
-                    <i class="fas fa-chart-pie"></i> Training Distribution
+    <!-- Secure Dashboard (Spam App + Stats) -->
+    <section id="app" class="app-section">
+        <div class="container">
+            <div class="header">
+                <h1><i class="fas fa-shield-virus"></i> Security Dashboard</h1>
+                <p style="color: var(--text-secondary)">Live Threat Detection Workspace</p>
+            </div>
+
+            <!-- Palfin Behavioral Coach & Stats -->
+            <div id="dashboard-stats" style="display: none;">
+                <div class="tip-card">
+                    <div class="tip-title"><i class="fas fa-lightbulb"></i> Behavioral Coach</div>
+                    <div id="dailyTip" style="font-style: italic; color: var(--text);">Loading insight...</div>
                 </div>
-                <div class="chart-wrapper">
-                    <canvas id="dataChart"></canvas>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">Current Balance</div>
+                        <div class="stat-value" id="stat-balance">--</div>
+                        <div class="stat-subtext">Available to spend</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Monthly Spend</div>
+                        <div class="stat-value" id="stat-spend" style="color: var(--primary);">--</div>
+                        <div class="stat-subtext">▼ 12% from last month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Savings Rate</div>
+                        <div class="stat-value" id="stat-savings" style="color: var(--accent);">--</div>
+                        <div class="stat-subtext">On track for goal</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Streak</div>
+                        <div class="stat-value" id="stat-streak" style="color: #F59E0B;">--</div>
+                        <div class="stat-subtext">Days Secure</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title">
-                    <i class="fas fa-chart-line"></i> Live Session Metrics
+            <div class="main-container">
+                <!-- Input Section -->
+                <div class="card-glass">
+                    <div class="card-title">
+                        <i class="fas fa-robot"></i> AI Analysis
+                    </div>
+                    <textarea id="emailInput" placeholder="Paste the email content here to analyze..."></textarea>
+                    <button onclick="detectSpam()" id="predictBtn" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-bolt"></i> Analyze Email
+                    </button>
+
+                    <div id="result">
+                        <div class="prediction-text" id="predictionText"></div>
+                        <div id="confidenceText" style="font-weight: 600; opacity: 0.8;"></div>
+                        <div class="confidence-bar-bg">
+                            <div class="confidence-bar-fill" id="confidenceBar"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="chart-wrapper">
-                    <canvas id="historyChart"></canvas>
+
+                <!-- Live Charts Section -->
+                <div class="charts-container">
+                    <div class="card-glass">
+                        <div class="card-title">
+                            <i class="fas fa-chart-pie"></i> Training Distribution
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="dataChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card-glass">
+                        <div class="card-title">
+                            <i class="fas fa-chart-line"></i> Live Session Metrics
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="historyChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Finize Chat Widget -->
+    <div class="chat-widget-btn" onclick="toggleChat()">
+        <i class="fas fa-robot"></i>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header">
+            <div class="chat-title">
+                <i class="fas fa-robot" style="color: var(--primary);"></i> Finize Assistant
+            </div>
+            <div onclick="toggleChat()" style="cursor: pointer; padding: 5px;">✕</div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message msg-bot">
+                Hi! I'm Finize, your financial & security assistant. How can I help you today?
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask Finize..."
+                onkeypress="handleChatKey(event)">
+            <button class="chat-send" onclick="sendChatMessage()">→</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal">
+            <h2 class="text-center" style="margin-bottom: 20px; color: var(--primary);">Login</h2>
+            <input type="email" placeholder="Email" class="chat-input"
+                style="width: 100%; margin-bottom: 10px; box-sizing: border-box;">
+            <input type="password" placeholder="Password" class="chat-input"
+                style="width: 100%; margin-bottom: 20px; box-sizing: border-box;">
+            <button class="btn btn-primary" style="width: 100%;" onclick="simulateLogin()">Login</button>
+            <p class="text-center" style="margin-top: 10px; cursor: pointer; color: var(--text-secondary);"
+                onclick="closeModal('loginModal')">Cancel</p>
+        </div>
+    </div>
+
+    <div id="signupModal" class="modal-overlay">
+        <div class="modal">
+            <h2 class="text-center" style="margin-bottom: 20px; color: var(--primary);">Sign Up</h2>
+            <input type="text" placeholder="Full Name" class="chat-input"
+                style="width: 100%; margin-bottom: 10px; box-sizing: border-box;">
+            <input type="email" placeholder="Email" class="chat-input"
+                style="width: 100%; margin-bottom: 10px; box-sizing: border-box;">
+            <input type="password" placeholder="Password" class="chat-input"
+                style="width: 100%; margin-bottom: 20px; box-sizing: border-box;">
+            <button class="btn btn-primary" style="width: 100%;" onclick="simulateLogin()">Create Account</button>
+            <p class="text-center" style="margin-top: 10px; cursor: pointer; color: var(--text-secondary);"
+                onclick="closeModal('signupModal')">Cancel</p>
         </div>
     </div>
 
     <script>
-        // Initialize Charts
-        let dataChart, historyChart;
-        const sessionHistory = {
-            labels: [],
-            data: []
-        };
+        // --- Chat Widget Logic ---
+        function toggleChat() {
+            const chat = document.getElementById('chatWindow');
+            if (chat.style.display === 'flex') {
+                chat.style.display = 'none';
+            } else {
+                chat.style.display = 'flex';
+                document.getElementById('chatInput').focus();
+            }
+        }
 
-        // Chart Defaults
+        function handleChatKey(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add User Message
+            const msgs = document.getElementById('chatMessages');
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message msg-user';
+            userMsg.textContent = text;
+            msgs.appendChild(userMsg);
+            msgs.scrollTop = msgs.scrollHeight;
+            input.value = '';
+
+            // Loading state
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'message msg-bot';
+            loadingMsg.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+            msgs.appendChild(loadingMsg);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await response.json();
+
+                // Replace loading with bot reply
+                msgs.removeChild(loadingMsg);
+                const botMsg = document.createElement('div');
+                botMsg.className = 'message msg-bot';
+                botMsg.textContent = data.reply;
+                msgs.appendChild(botMsg);
+                msgs.scrollTop = msgs.scrollHeight;
+
+            } catch (e) {
+                console.error(e);
+                msgs.removeChild(loadingMsg);
+            }
+        }
+
+        // --- Auth & Dashboard Logic ---
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function simulateLogin() {
+            closeModal('loginModal');
+            closeModal('signupModal');
+
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'inline-block';
+            document.getElementById('hero').style.display = 'none'; // Optional: hide hero to focus on dash
+            document.getElementById('dashboard-stats').style.display = 'block';
+
+            // Load Dashboard Data
+            try {
+                const res = await fetch('/api/dashboard-data');
+                const data = await res.json();
+
+                document.getElementById('stat-balance').innerText = '₹' + data.balance.toLocaleString();
+                document.getElementById('stat-spend').innerText = '₹' + data.monthlyExpenses.toLocaleString();
+                document.getElementById('stat-savings').innerText = data.savingsRate + '%';
+                document.getElementById('stat-streak').innerText = data.streak + ' Days';
+                document.getElementById('dailyTip').innerText = `"${data.dailyTip}"`;
+
+            } catch (e) { console.error("Failed to load dash data", e); }
+
+            // Scroll to app
+            document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function logout() {
+            document.getElementById('loginBtn').style.display = 'inline-block';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('hero').style.display = 'flex';
+            document.getElementById('dashboard-stats').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        // --- Existing Spam Logic (Preserved) ---
+        let dataChart, historyChart;
+        const sessionHistory = { labels: [], data: [] };
+
         Chart.defaults.font.family = "'Outfit', sans-serif";
-        Chart.defaults.color = '#1e293b';
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.borderColor = '#1E293B';
 
         async function initCharts() {
-            // Fetch Training Data Stats
             try {
                 const response = await fetch('/stats');
                 const stats = await response.json();
-
                 const ctxData = document.getElementById('dataChart').getContext('2d');
                 dataChart = new Chart(ctxData, {
                     type: 'doughnut',
@@ -340,33 +340,23 @@
                         labels: Object.keys(stats),
                         datasets: [{
                             data: Object.values(stats),
-                            backgroundColor: ['#10b981', '#f43f5e'],
-                            borderWidth: 0,
-                            hoverOffset: 10
+                            backgroundColor: ['#22C55E', '#EF4444'],
+                            borderWidth: 0
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         cutout: '70%',
-                        plugins: {
-                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true
-                        }
+                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, color: '#F8FAFC' } } }
                     }
                 });
-            } catch (e) {
-                console.error("Failed to load stats", e);
-            }
+            } catch (e) { }
 
-            // Session History Chart
             const ctxHistory = document.getElementById('historyChart').getContext('2d');
             const gradient = ctxHistory.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)');
-            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+            gradient.addColorStop(0, 'rgba(34, 197, 94, 0.5)');
+            gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
 
             historyChart = new Chart(ctxHistory, {
                 type: 'line',
@@ -375,40 +365,25 @@
                     datasets: [{
                         label: 'Spam Probability',
                         data: [],
-                        borderColor: '#6366f1',
+                        borderColor: '#22C55E',
                         borderWidth: 3,
                         tension: 0.4,
                         fill: true,
                         backgroundColor: gradient,
                         pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#6366f1',
+                        pointBorderColor: '#22C55E',
                         pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 1,
-                            grid: { color: 'rgba(0,0,0,0.05)' }
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
+                        y: { beginAtZero: true, max: 1, grid: { color: '#1E293B' }, ticks: { color: '#94A3B8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
                     },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(30, 41, 59, 0.9)',
-                            padding: 12,
-                            cornerRadius: 8,
-                            displayColors: false
-                        }
-                    }
+                    plugins: { legend: { display: false } }
                 }
             });
         }
@@ -417,12 +392,9 @@
             const email = document.getElementById('emailInput').value;
             const resultDiv = document.getElementById('result');
             const btn = document.getElementById('predictBtn');
+            const originalBtnText = btn.innerHTML;
 
-            if (!email.trim()) {
-                alert("Please enter some text.");
-                return;
-            }
-
+            if (!email.trim()) { alert("Please enter some text."); return; }
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analyzing...';
             resultDiv.style.display = 'none';
@@ -433,56 +405,29 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
                 });
-
                 const data = await response.json();
-
                 if (response.ok) {
                     resultDiv.style.display = 'block';
-                    const isSpam = data.prediction === 'Spam';
-
-                    // Update UI
+                    const isSpam = data.prediction === 'Phishing detected';
                     resultDiv.className = isSpam ? 'result-spam' : 'result-ham';
                     document.getElementById('predictionText').innerHTML =
                         `<i class="fas ${isSpam ? 'fa-radiation' : 'fa-check-circle'}"></i> ${data.prediction}`;
-
                     const confidenceVal = parseFloat(data.confidence.replace('%', ''));
                     document.getElementById('confidenceText').innerText = `Confidence Score: ${data.confidence}`;
+                    document.getElementById('confidenceBar').style.width = `${confidenceVal}%`;
+                    document.getElementById('confidenceBar').style.backgroundColor = isSpam ? '#EF4444' : '#22C55E';
 
-                    const barFill = document.getElementById('confidenceBar');
-                    // Reset width for animation
-                    barFill.style.width = '0%';
-                    setTimeout(() => {
-                        barFill.style.width = `${confidenceVal}%`;
-                        barFill.style.backgroundColor = isSpam ? '#f43f5e' : '#10b981';
-                    }, 50);
-
-                    // Update History Chart
-                    const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const timeLabel = new Date().toLocaleTimeString();
                     sessionHistory.labels.push(timeLabel);
                     sessionHistory.data.push(data.score);
-
-                    if (sessionHistory.labels.length > 10) {
-                        sessionHistory.labels.shift();
-                        sessionHistory.data.shift();
-                    }
-
+                    if (sessionHistory.labels.length > 10) { sessionHistory.labels.shift(); sessionHistory.data.shift(); }
                     historyChart.data.labels = sessionHistory.labels;
                     historyChart.data.datasets[0].data = sessionHistory.data;
                     historyChart.update();
-
-                } else {
-                    alert("Error: " + data.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert("An error occurred while checking.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-bolt"></i> Analyze Email';
-            }
+                } else { alert("Error: " + data.error); }
+            } catch (error) { console.error(error); alert("An error occurred."); } finally { btn.disabled = false; btn.innerHTML = originalBtnText; }
         }
 
-        // Init
         initCharts();
     </script>
 </body>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section" id="hero">
+    <h1 class="hero-title text-center">
+        Master Your Security with <span class="highlight">Palfin</span>
+    </h1>
+    <p class="hero-subtitle text-center">
+        AI-powered threat detection. Track, analyze, and secure your communications with intelligent insights.
+    </p>
+
+    <div class="hero-cta">
+        <a href="/login" class="btn btn-primary">
+            <i class="fas fa-shield-alt"></i> Get Started Free
+        </a>
+        <a href="/login" class="btn btn-secondary">
+            <i class="fas fa-user"></i> Login
+        </a>
+    </div>
+
+    <div class="scroll-indicator" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+        Explore Features ↓
+    </div>
+</section>
+
+<!-- Tools Section -->
+<section id="features" class="tools-section">
+    <div class="container">
+        <h2 class="section-title">Tools & Features</h2>
+        <p class="section-subtitle">
+            Everything you need to take control of your digital safety.
+        </p>
+
+        <div class="tools-grid">
+            <div class="tool-card">
+                <div class="tool-icon">📊</div>
+                <div class="tool-title">Real-time Analysis</div>
+                <p class="tool-desc">Automatically parse and categorize emails to detect threats instantly.</p>
+            </div>
+            <div class="tool-card">
+                <div class="tool-icon">🧠</div>
+                <div class="tool-title">Smart Learning</div>
+                <p class="tool-desc">Federated learning improves accuracy without compromising privacy.</p>
+            </div>
+            <div class="tool-card">
+                <div class="tool-icon">🤖</div>
+                <div class="tool-title">AI Powered</div>
+                <p class="tool-desc">Advanced GRU and Neural Networks identify complex patterns.</p>
+            </div>
+            <div class="tool-card">
+                <div class="tool-icon">🔒</div>
+                <div class="tool-title">Private by Design</div>
+                <p class="tool-desc">Your data stays on your device. Only model updates are shared.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

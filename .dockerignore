@@ -38,7 +38,7 @@ wheels/
 
 # Documentation (not needed in container)
 *.md
-!requirements.txt
+*.md
 
 # Large files (should be mounted as volumes)
 # Uncomment if you want to exclude data from image

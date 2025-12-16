@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section id="app" class="app-section">
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-shield-virus"></i> Security Dashboard</h1>
+            <p style="color: var(--text-secondary)">Live Threat Detection Workspace</p>
+        </div>
+
+        <!-- Palfin Behavioral Coach & Stats -->
+        <div class="tip-card">
+            <div class="tip-title"><i class="fas fa-lightbulb"></i> Behavioral Coach</div>
+            <div id="dailyTip" style="font-style: italic; color: var(--text);">Loading insight...</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Current Balance</div>
+                <div class="stat-value" id="stat-balance">--</div>
+                <div class="stat-subtext">Available to spend</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Monthly Spend</div>
+                <div class="stat-value" id="stat-spend" style="color: var(--primary);">--</div>
+                <div class="stat-subtext">▼ 12% from last month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Savings Rate</div>
+                <div class="stat-value" id="stat-savings" style="color: var(--accent);">--</div>
+                <div class="stat-subtext">On track for goal</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Streak</div>
+                <div class="stat-value" id="stat-streak" style="color: #F59E0B;">--</div>
+                <div class="stat-subtext">Days Secure</div>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <!-- Input Section -->
+            <div class="card-glass">
+                <div class="card-title">
+                    <i class="fas fa-robot"></i> AI Analysis
+                </div>
+                <textarea id="emailInput" placeholder="Paste the email content here to analyze..."></textarea>
+                <button onclick="detectSpam()" id="predictBtn" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-bolt"></i> Analyze Email
+                </button>
+
+                <div id="result">
+                    <div class="prediction-text" id="predictionText"></div>
+                    <div id="confidenceText" style="font-weight: 600; opacity: 0.8;"></div>
+                    <div class="confidence-bar-bg">
+                        <div class="confidence-bar-fill" id="confidenceBar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Charts Section -->
+            <div class="charts-container">
+                <div class="card-glass">
+                    <div class="card-title">
+                        <i class="fas fa-chart-pie"></i> Training Distribution
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="dataChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card-glass">
+                    <div class="card-title">
+                        <i class="fas fa-chart-line"></i> Live Session Metrics
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load Dashboard Data
+    async function loadDashboardData() {
+        try {
+            const res = await fetch('/api/dashboard-data');
+            const data = await res.json();
+
+            document.getElementById('stat-balance').innerText = '₹' + data.balance.toLocaleString();
+            document.getElementById('stat-spend').innerText = '₹' + data.monthlyExpenses.toLocaleString();
+            document.getElementById('stat-savings').innerText = data.savingsRate + '%';
+            document.getElementById('stat-streak').innerText = data.streak + ' Days';
+            document.getElementById('dailyTip').innerText = `"${data.dailyTip}"`;
+
+        } catch (e) { console.error("Failed to load dash data", e); }
+    }
+
+    // Init Components
+    loadDashboardData();
+
+    // --- Spam Logic ---
+    let dataChart, historyChart;
+    const sessionHistory = { labels: [], data: [] };
+
+    Chart.defaults.font.family = "'Outfit', sans-serif";
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.borderColor = '#1E293B';
+
+    async function initCharts() {
+        try {
+            const response = await fetch('/stats');
+            const stats = await response.json();
+            const ctxData = document.getElementById('dataChart').getContext('2d');
+            dataChart = new Chart(ctxData, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(stats),
+                    datasets: [{
+                        data: Object.values(stats),
+                        backgroundColor: ['#22C55E', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, color: '#F8FAFC' } } }
+                }
+            });
+        } catch (e) { }
+
+        const ctxHistory = document.getElementById('historyChart').getContext('2d');
+        const gradient = ctxHistory.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.5)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
+
+        historyChart = new Chart(ctxHistory, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Spam Probability',
+                    data: [],
+                    borderColor: '#22C55E',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: gradient,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#22C55E',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 1, grid: { color: '#1E293B' }, ticks: { color: '#94A3B8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    async function detectSpam() {
+        const email = document.getElementById('emailInput').value;
+        const resultDiv = document.getElementById('result');
+        const btn = document.getElementById('predictBtn');
+        const originalBtnText = btn.innerHTML;
+
+        if (!email.trim()) { alert("Please enter some text."); return; }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analyzing...';
+        resultDiv.style.display = 'none';
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                resultDiv.style.display = 'block';
+                const isSpam = data.prediction === 'Phishing detected';
+                resultDiv.className = isSpam ? 'result-spam' : 'result-ham';
+
+                // Prediction Text
+                document.getElementById('predictionText').innerHTML =
+                    `<i class="fas ${isSpam ? 'fa-radiation' : 'fa-check-circle'}"></i> ${data.prediction}`;
+
+                // Confidence
+                const confidenceVal = parseFloat(data.confidence.replace('%', ''));
+                document.getElementById('confidenceText').innerText = `Confidence Score: ${data.confidence}`;
+                document.getElementById('confidenceBar').style.width = `${confidenceVal}%`;
+                document.getElementById('confidenceBar').style.backgroundColor = isSpam ? '#EF4444' : '#22C55E';
+
+                // --- NEW: AI Explain Button ---
+                // Remove existing button if any
+                const existingExplainBtn = document.getElementById('explainBtn');
+                if (existingExplainBtn) existingExplainBtn.remove();
+                const existingExplainText = document.getElementById('explainText');
+                if (existingExplainText) existingExplainText.remove();
+
+                const explainBtn = document.createElement('button');
+                explainBtn.id = 'explainBtn';
+                explainBtn.className = 'btn btn-secondary';
+                explainBtn.style.marginTop = '15px';
+                explainBtn.style.width = '100%';
+                explainBtn.innerHTML = '<i class="fas fa-magic"></i> Ask AI: Why is this ' + (isSpam ? 'Spam?' : 'Safe?');
+                explainBtn.onclick = () => explainSpamRating(email, data.prediction);
+                resultDiv.appendChild(explainBtn);
+                // ------------------------------
+
+                const timeLabel = new Date().toLocaleTimeString();
+                sessionHistory.labels.push(timeLabel);
+                sessionHistory.data.push(data.score);
+                if (sessionHistory.labels.length > 10) { sessionHistory.labels.shift(); sessionHistory.data.shift(); }
+                historyChart.data.labels = sessionHistory.labels;
+                historyChart.data.datasets[0].data = sessionHistory.data;
+                historyChart.update();
+            } else { alert("Error: " + data.error); }
+        } catch (error) { console.error(error); alert("An error occurred."); } finally { btn.disabled = false; btn.innerHTML = originalBtnText; }
+    }
+
+    // --- New: Explain Spam Logic ---
+    async function explainSpamRating(text, prediction) {
+        const btn = document.getElementById('explainBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analyzing with AI...';
+
+        try {
+            const res = await fetch('/explain_spam', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, prediction: prediction })
+            });
+            const data = await res.json();
+
+            // Create Explanation Box
+            const explainDiv = document.createElement('div');
+            explainDiv.id = 'explainText';
+            explainDiv.style.marginTop = '15px';
+            explainDiv.style.padding = '15px';
+            explainDiv.style.backgroundColor = 'rgba(255,255,255,0.05)';
+            explainDiv.style.borderRadius = '8px';
+            explainDiv.style.borderLeft = '4px solid var(--accent)';
+            explainDiv.style.textAlign = 'left';
+            explainDiv.innerHTML = `<strong><i class="fas fa-robot"></i> AI Analysis:</strong><br>${data.explanation}`;
+
+            btn.parentNode.appendChild(explainDiv);
+            btn.style.display = 'none'; // Hide button after asking
+
+        } catch (e) {
+            console.error(e);
+            alert("AI Explanation failed.");
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    initCharts();
+</script>
+{% endblock %}

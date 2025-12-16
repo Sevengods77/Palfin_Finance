@@ -16,18 +16,36 @@ services:
       # Optional: Mount models for easy updates
       - ./spam_model.pth:/app/spam_model.pth
       - ./word_to_idx.json:/app/word_to_idx.json
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - ./app.py:/app/app.py
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      - GEMINI_API_KEY=AIzaSyBQTy6adjmGi-G5A94EsTLFChExNDeZokU
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5001/health')"]
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:5001/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
       - spam-detection-network
+
+  mlflow-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mlflow-ui
+    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri file:///app/mlruns
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+    networks:
+      - spam-detection-network
+    restart: unless-stopped
 
 networks:
   spam-detection-network:
