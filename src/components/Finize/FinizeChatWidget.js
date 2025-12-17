@@ -3,36 +3,79 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, Platfo
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 import botAvatar from '../../../assets/Finize_bot.png';
+import { getTransactions, getMonthlySpend } from '../../services/transactionService';
+import { getUserStats } from '../../services/gamificationService';
+import { getResponse as getFinizeResponse } from '../../../components/finizeService';
 
-const FinizeChatWidget = () => {
+const FinizeChatWidget = ({ user }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         { id: 1, text: "Hi! I'm Finize, your financial assistant. How can I help you today?", sender: 'bot' }
     ]);
     const [inputText, setInputText] = useState('');
+    const [isSending, setIsSending] = useState(false);
 
-    const handleSend = () => {
-        if (!inputText.trim()) return;
+    const handleSend = async () => {
+        const text = inputText.trim();
+        if (!text || isSending) return;
 
-        const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
+        const userMsg = { id: Date.now(), text, sender: 'user' };
         setMessages(prev => [...prev, userMsg]);
         setInputText('');
+        setIsSending(true);
 
-        // Simple rule-based reply
-        setTimeout(() => {
-            let replyText = "I'm still learning, but I can help you track your expenses!";
-            const lowerInput = userMsg.text.toLowerCase();
+        try {
+            // Get latest transactions + dashboard-style metrics as context
+            const [transactions, monthlySpend, userStats] = await Promise.all([
+                getTransactions(),
+                getMonthlySpend(),
+                getUserStats(),
+            ]);
 
-            if (lowerInput.includes('balance') || lowerInput.includes('money')) {
-                replyText = "Your current balance across all accounts is ₹9,740. You're doing great!";
-            } else if (lowerInput.includes('spend') || lowerInput.includes('cost')) {
-                replyText = "You've spent ₹1,240 this month. That's 12% less than last month.";
-            } else if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
-                replyText = "Hello there! Ready to manage your finances?";
-            }
+            // Roughly infer budget from dashboard's progress bar (65%)
+            const budgetProgress = 65;
+            const budget = budgetProgress > 0 ? monthlySpend / (budgetProgress / 100) : null;
 
-            setMessages(prev => [...prev, { id: Date.now() + 1, text: replyText, sender: 'bot' }]);
-        }, 1000);
+            // Mirror the dashboard's "Total Savings" mock value
+            const savings = 8500;
+
+            const snapshot = {
+                monthlySpend,
+                budget,
+                budgetProgress,
+                savings,
+                streak: userStats?.streak,
+                points: userStats?.points,
+                level: userStats?.level,
+            };
+
+            // Build simple history format expected by finizeService
+            const history = [...messages, userMsg].map(m => ({
+                from: m.sender === 'bot' ? 'finize' : 'user',
+                text: m.text,
+            }));
+
+            const { response } = await getFinizeResponse(text, transactions, user || null, history, snapshot);
+
+            const botMsg = {
+                id: Date.now() + 1,
+                text: response,
+                sender: 'bot',
+            };
+            setMessages(prev => [...prev, botMsg]);
+        } catch (err) {
+            console.error('Finize chat error:', err);
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: Date.now() + 2,
+                    text: "Sorry, something went wrong while talking to Finize. Please try again.",
+                    sender: 'bot',
+                },
+            ]);
+        } finally {
+            setIsSending(false);
+        }
     };
 
     if (!isOpen) {
@@ -83,8 +126,8 @@ const FinizeChatWidget = () => {
                     onChangeText={setInputText}
                     onSubmitEditing={handleSend}
                 />
-                <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-                    <Text style={styles.sendButtonText}>→</Text>
+                <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={isSending}>
+                    <Text style={styles.sendButtonText}>{isSending ? '…' : '→'}</Text>
                 </TouchableOpacity>
             </View>
         </View>
