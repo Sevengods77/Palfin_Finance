@@ -3,20 +3,15 @@ import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 
-const ToolCard = ({ title, description, icon, onPress }) => (
+const ToolCard = ({ title, description, icon }) => (
     <View style={[sharedStyles.card, styles.card]}>
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardDescription}>{description}</Text>
-        {onPress && (
-            <Text style={styles.linkText} onPress={onPress}>
-                Open
-            </Text>
-        )}
     </View>
 );
 
-const ToolsSection = ({ onOpenTransactions, onOpenCoach }) => {
+const ToolsSection = () => {
     return (
         <View style={styles.container}>
             <View style={sharedStyles.maxWidthContainer}>
@@ -29,14 +24,22 @@ const ToolsSection = ({ onOpenTransactions, onOpenCoach }) => {
                     <ToolCard
                         icon="📊"
                         title="Transaction Parsing"
-                        description="View and inspect parsed transactions in one place."
-                        onPress={onOpenTransactions}
+                        description="Automatically parse and categorize transactions from SMS and bank notifications."
+                    />
+                    <ToolCard
+                        icon="🧠"
+                        title="Smart Categories"
+                        description="AI-driven categorization learns your spending habits for accurate tracking."
                     />
                     <ToolCard
                         icon="🤖"
                         title="Behavioral Coach"
-                        description="Chat with Finize to get personalized tips and nudges on your spending."
-                        onPress={onOpenCoach}
+                        description="Get personalized tips and nudges to help you stick to your budget."
+                    />
+                    <ToolCard
+                        icon="🎮"
+                        title="Gamified Dashboard"
+                        description="Track your progress with streaks, badges, and visual goals."
                     />
                 </View>
             </View>
@@ -89,11 +92,6 @@ const styles = StyleSheet.create({
         color: theme.colors.textSecondary,
         textAlign: 'center',
         lineHeight: 24,
-    },
-    linkText: {
-        marginTop: theme.spacing.m,
-        color: theme.colors.primary,
-        fontWeight: '600',
     },
 });
 

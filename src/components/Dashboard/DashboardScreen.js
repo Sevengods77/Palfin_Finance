@@ -7,10 +7,6 @@ import { getUserStats } from '../../services/gamificationService';
 import { getDailyTip } from '../../services/coachService';
 import SMSExtractor from '../Tools/SMSExtractor';
 
-// Simple configurable monthly budget for the user (in ₹)
-// Change this value to whatever budget you want to track against.
-const MONTHLY_BUDGET = 15000;
-
 const StatCard = ({ title, value, subtext, color }) => (
     <View style={[sharedStyles.card, styles.statCard]}>
         <Text style={styles.statTitle}>{title}</Text>
@@ -48,7 +44,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
     const [dailyTip, setDailyTip] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [showExtractor, setShowExtractor] = useState(false);
-    const [budgetProgress, setBudgetProgress] = useState(0);
 
     // Scrolling refs
     const scrollViewRef = useRef(null);
@@ -59,11 +54,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
         // Subscribe to store updates
         const unsubscribe = subscribeToStore((data) => {
             setDashboardData(data);
-            // Compute budget progress when dashboard data updates
-            if (MONTHLY_BUDGET > 0 && data.monthlyExpenses) {
-                const pct = Math.min(100, Math.round((data.monthlyExpenses / MONTHLY_BUDGET) * 100));
-                setBudgetProgress(pct);
-            }
         });
 
         // Initial Data Load (Gamification/Coach services are still mock/async)
@@ -177,16 +167,18 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                         subtext="On track for goal"
                         color={theme.colors.accent}
                     />
+                    <StatCard
+                        title="Streak"
+                        value={`${stats.streak} Days`}
+                        subtext="Tracking expenses"
+                        color="#F59E0B"
+                    />
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionHeader}>Budget Progress</Text>
                     <View style={sharedStyles.card}>
-                        <ProgressBar progress={budgetProgress} />
-                        <Text style={styles.budgetLabel}>
-                            Budget: ₹{MONTHLY_BUDGET.toLocaleString('en-IN')} •
-                            {' '}Spent: ₹{(dashboardData.monthlyExpenses || 0).toLocaleString('en-IN')}
-                        </Text>
+                        <ProgressBar progress={30} />
                     </View>
                 </View>
 
@@ -205,6 +197,9 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                             onPress={() => setShowExtractor(true)}
                             isActive={showExtractor}
                         />
+                        <FeatureCard title="View Categories" icon="🏷️" onPress={() => { }} />
+                        <FeatureCard title="Behavioral Coach" icon="🤖" onPress={() => { }} />
+                        <FeatureCard title="Savings Goals" icon="🎯" onPress={() => { }} />
                     </View>
                 </View>
 
@@ -308,12 +303,6 @@ const styles = StyleSheet.create({
         color: theme.colors.textSecondary,
         fontSize: 14,
         textAlign: 'right',
-    },
-    budgetLabel: {
-        marginTop: theme.spacing.s,
-        color: theme.colors.textSecondary,
-        fontSize: 13,
-        textAlign: 'left',
     },
     featuresGrid: {
         flexDirection: 'row',

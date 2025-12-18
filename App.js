@@ -9,7 +9,6 @@ import { getInitialSession, subscribeAuthChange, signOutUser } from './src/servi
 import TopBar from './src/components/Layout/TopBar';
 import PublicHome from './src/components/Home/PublicHome';
 import ToolsSection from './src/components/Home/ToolsSection';
-import TransactionsScreen from './src/components/Transactions/TransactionsScreen';
 import DashboardScreen from './src/components/Dashboard/DashboardScreen';
 import TransactionHistory from './src/components/History/TransactionHistory';
 import LoginModal from './src/components/Auth/LoginModal';
@@ -22,7 +21,7 @@ export default function App() {
   });
 
   const [user, setUser] = useState(null);
-  const [route, setRoute] = useState('home'); // 'home', 'dashboard', 'tools', 'transactions', 'history'
+  const [route, setRoute] = useState('home'); // 'home', 'dashboard', 'tools', 'history'
   const [loginVisible, setLoginVisible] = useState(false);
   const [signupVisible, setSignupVisible] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -82,10 +81,14 @@ export default function App() {
   const handleNavigate = (dest) => {
     if (dest === 'tools') {
       if (user) {
-        setRoute('tools');
+        setRoute('dashboard');
+        setTargetSection('tools');
       } else {
         setRoute('home');
         setTargetSection('tools');
+
+        // Trigger scroll if we are already on home
+        // We use a small timeout to let render happen or state update
         setTimeout(() => {
           scrollToTools();
         }, 100);
@@ -126,38 +129,16 @@ export default function App() {
     }
 
     if (user) {
-      // Authenticated Routes
-      switch (route) {
-        case 'dashboard':
-          return (
-            <DashboardScreen
-              user={user}
-              scrollToSection={targetSection}
-              onScrollHandled={() => setTargetSection(null)}
-            />
-          );
-        case 'tools':
-          return (
-            <ScrollView style={sharedStyles.container}>
-              <ToolsSection
-                onOpenTransactions={() => setRoute('transactions')}
-                onOpenCoach={() => {}}
-              />
-            </ScrollView>
-          );
-        case 'transactions':
-          return <TransactionsScreen />;
-        case 'history':
-          return <TransactionHistory />;
-        default:
-          return (
-            <DashboardScreen
-              user={user}
-              scrollToSection={targetSection}
-              onScrollHandled={() => setTargetSection(null)}
-            />
-          );
+      if (route === 'history') {
+        return <TransactionHistory />;
       }
+      return (
+        <DashboardScreen
+          user={user}
+          scrollToSection={targetSection}
+          onScrollHandled={() => setTargetSection(null)}
+        />
+      );
     } else {
       // Public Routes
       return (
@@ -170,7 +151,6 @@ export default function App() {
             onSignupClick={() => setSignupVisible(true)}
             onScrollToTools={() => handleNavigate('tools')}
           />
-<<<<<<< HEAD
           <View
             ref={toolsRef}
             onLayout={(event) => {
@@ -183,10 +163,7 @@ export default function App() {
               }
             }}
           >
-            <ToolsSection
-              onOpenTransactions={() => setRoute('tools')}
-              onOpenCoach={() => {}}
-            />
+            <ToolsSection />
           </View>
         </ScrollView>
       );

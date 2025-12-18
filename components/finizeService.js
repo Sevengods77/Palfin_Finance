@@ -1,9 +1,36 @@
 // Finize service that calls Gemini for personalised, spending-aware advice.
+// Keeps a local conversation log and falls back to a heuristic policy
+// if the API key isn't configured or the call fails.
 
 const logs = [];
 
-const GEMINI_API_KEY = "AIzaSyBcBzgKpdqThB31qs3zWmkT1RyES5kqrj8";
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_API_KEY = "AIzaSyDl2Y25OC62FzjE2C1RZE8TGSwcZYQcOMw";
+
+const GEMINI_MODEL = 'gemini-1.5-flash';
+
+function simpleFallbackPolicy(message, transactions = []) {
+  const msg = (message || '').toLowerCase();
+
+  // If user asks about saving or budget
+  if (/(save|saving|budget|spend less|help me save)/i.test(msg)) {
+    const total = transactions.reduce((s, t) => s + Number(t.amount || 0), 0);
+    if (total > 10000)
+      return `I see your spending this period is ₹${Math.round(
+        total
+      )} — consider setting a strict weekly budget and pausing non-essential subscriptions for 30 days.`;
+    if (total > 5000)
+      return `You're spending moderately; pick one category (like eating out or shopping) and cap it next month. Even a 10–15% cut can free up savings.`;
+    return `Nice work keeping your overall spending lower. Try automating a fixed savings amount every month so it "gets spent" into your savings before you can use it.`;
+  }
+
+  // If user asks about a transaction or merchant
+  if (/starbucks|coffee|cafe|restaurant/i.test(msg)) {
+    return `That looks like dining/coffee spend. Swap just one weekly café visit for home-brewed coffee and you could redirect ~₹500–₹800 a month into savings.`;
+  }
+
+  // Default friendly response
+  return `I'm Finize, your financial coach. Ask me how to reduce spending, build a budget, or how a specific transaction affects your goals.`;
+}
 
 function formatTransactionsContext(transactions = []) {
   if (!Array.isArray(transactions) || !transactions.length) {
@@ -55,7 +82,9 @@ function formatFinancialSnapshot(snapshot) {
     lines.push(`Reward points: ${snapshot.points}.`);
   }
 
-  return lines.length ? lines.join('\n') : 'No additional budget/savings snapshot is available.';
+  if (!lines.length) return 'No additional budget/savings snapshot is available.';
+
+  return lines.join('\n');
 }
 
 function buildGeminiPayload(message, transactions, user, history = [], snapshot = null) {
@@ -80,47 +109,95 @@ ${snapshotText}
 `.trim();
 
   const historyContents = Array.isArray(history)
-    ? history.map((m) => ({
-        role: m.from === 'finize' ? 'model' : 'user',
-        parts: [{ text: String(m.text || '') }],
-      }))
+    ? history.map((m) => {
+        const role = m.from === 'finize' ? 'model' : 'user';
+        return {
+          role,
+          parts: [{ text: String(m.text || '') }],
+        };
+      })
     : [];
 
   return {
     contents: [
-      { role: 'user', parts: [{ text: systemInstruction }] },
+      {
+        role: 'user',
+        parts: [{ text: systemInstruction }],
+      },
       ...historyContents,
-      { role: 'user', parts: [{ text: String(message || '') }] },
+      {
+        role: 'user',
+        parts: [{ text: String(message || '') }],
+      },
     ],
   };
 }
 
 async function callGemini(message, transactions, user, history = [], snapshot = null) {
-  if (!GEMINI_API_KEY) throw new Error('Gemini API key is not configured.');
+  if (!GEMINI_API_KEY) {
+    return {
+      text: simpleFallbackPolicy(message, transactions),
+      usedFallback: true,
+    };
+  }
 
   const payload = buildGeminiPayload(message, transactions, user, history, snapshot);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!res.ok) {
-    throw new Error(`Gemini error: ${res.status}`);
+    if (!res.ok) {
+      // Surface rate-limit / quota issues separately so the UI can show a clear message
+      if (res.status === 429) {
+        throw new Error('Gemini error: 429 (rate limit or quota exceeded)');
+      }
+      throw new Error(`Gemini error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text =
+      (data &&
+        data.candidates &&
+        data.candidates[0] &&
+        data.candidates[0].content &&
+        Array.isArray(data.candidates[0].content.parts) &&
+        data.candidates[0].content.parts
+          .map((p) => p.text || '')
+          .join(' ')
+          .trim()) ||
+      simpleFallbackPolicy(message, transactions);
+
+    return { text, usedFallback: false };
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    console.warn('Gemini call failed, using fallback:', msg);
+
+    // If it’s clearly a quota / rate-limit issue, return an explicit message
+    if (msg.includes('429')) {
+      return {
+        text:
+          'I’m temporarily unable to reach my Gemini brain because the API quota or rate limit was hit. ' +
+          'Please wait a bit and try again, or update your Gemini key / quota settings.',
+        usedFallback: true,
+      };
+    }
+
+    return {
+      text: simpleFallbackPolicy(message, transactions),
+      usedFallback: true,
+    };
   }
-
-  const data = await res.json();
-
-  return (
-    data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join(' ').trim() ||
-    'Gemini returned an empty response.'
-  );
 }
 
 export async function getResponse(message, transactions = [], user = null, history = [], snapshot = null) {
-  const text = await callGemini(message, transactions, user, history, snapshot);
+  const { text } = await callGemini(message, transactions, user, history, snapshot);
   const entry = {
     ts: Date.now(),
     user: user ? user.email || user.id || 'anon' : 'anon',
@@ -139,7 +216,11 @@ export function clearLogs() {
   logs.length = 0;
 }
 
-// Mock training endpoint
+// Mock training endpoint — in real world this would train an RL model using logs
 export async function trainMock() {
+  // pretend to run training
   return { status: 'ok', trainedOn: logs.length };
 }
+
+
+
