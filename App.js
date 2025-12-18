@@ -120,7 +120,8 @@ export default function App() {
   const [toolsY, setToolsY] = useState(0);
 
   const renderContent = () => {
-    if (loading || !fontsLoaded) {
+    // Only block on auth loading; don't block the whole UI if the web font fails to load.
+    if (loading) {
       return (
         <View style={[sharedStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />

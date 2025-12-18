@@ -142,12 +142,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                     <Text style={sharedStyles.subtitle}>Here's your financial snapshot.</Text>
                 </View>
 
-                {/* Behavioral Coach Tip */}
-                <View style={[sharedStyles.card, styles.tipCard]}>
-                    <Text style={styles.tipTitle}>💡 Behavioral Coach</Text>
-                    <Text style={styles.tipText}>{dailyTip}</Text>
-                </View>
-
                 <View style={styles.statsGrid}>
                     <StatCard
                         title="Current Balance"
@@ -160,18 +154,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                         value={`₹${(dashboardData.monthlyExpenses || 0).toLocaleString('en-IN')}`}
                         subtext="▼ 12% from last month"
                         color={theme.colors.primary}
-                    />
-                    <StatCard
-                        title="Savings Rate"
-                        value={`${dashboardData.savingsRate}%`}
-                        subtext="On track for goal"
-                        color={theme.colors.accent}
-                    />
-                    <StatCard
-                        title="Streak"
-                        value={`${stats.streak} Days`}
-                        subtext="Tracking expenses"
-                        color="#F59E0B"
                     />
                 </View>
 
@@ -197,9 +179,6 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                             onPress={() => setShowExtractor(true)}
                             isActive={showExtractor}
                         />
-                        <FeatureCard title="View Categories" icon="🏷️" onPress={() => { }} />
-                        <FeatureCard title="Behavioral Coach" icon="🤖" onPress={() => { }} />
-                        <FeatureCard title="Savings Goals" icon="🎯" onPress={() => { }} />
                     </View>
                 </View>
 

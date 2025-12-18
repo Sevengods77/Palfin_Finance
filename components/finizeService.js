@@ -4,9 +4,9 @@
 
 const logs = [];
 
-const GEMINI_API_KEY = "AIzaSyDl2Y25OC62FzjE2C1RZE8TGSwcZYQcOMw";
+const GEMINI_API_KEY = "AIzaSyANMT_4tNZ7cakK9U5_yYdJNxNhHZFC-3k";
 
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 function simpleFallbackPolicy(message, transactions = []) {
   const msg = (message || '').toLowerCase();
