@@ -98,49 +98,22 @@ export const getMonthlySpend = () => {
 
 // Simple keyword-based auto-categorization logic
 // Robust categorization logic
-const CATEGORY_KEYWORDS = {
-    'Food': ['food', 'lunch', 'dinner', 'breakfast', 'burger', 'pizza', 'subway', 'zomato', 'swiggy', 'restaurant', 'cafe', 'coffee', 'tea', 'snacks', 'dining', 'mcdonalds', 'kfc', 'dominos', 'starbucks'],
-    'Groceries': ['grocery', 'groceries', 'bigbasket', 'blinkit', 'zepto', 'instamart', 'milk', 'fruits', 'vegetables', 'supermarket', 'mart', 'kirana', 'bread', 'egg', 'ration'],
-    'Transport': ['cab', 'uber', 'ola', 'taxi', 'auto', 'bus', 'train', 'flight', 'ticket', 'fuel', 'petrol', 'diesel', 'parking', 'toll', 'metro', 'ride', 'rapido'],
-    'Utilities': ['bill', 'electricity', 'water', 'gas', 'recharge', 'wifi', 'broadband', 'mobile', 'internet', 'dth', 'rent', 'maintenance', 'bescom', 'bwssb'],
-    'Shopping': ['shop', 'store', 'amazon', 'flipkart', 'myntra', 'ajio', 'clothes', 'shirt', 'pant', 'shoes', 'accessories', 'toy', 'gift', 'electronics', 'mall', 'decathlon', 'zara', 'h&m'],
-    'Entertainment': ['movie', 'cinema', 'film', 'netflix', 'prime', 'spotify', 'game', 'subscription', 'event', 'ticket', 'show', 'bookmyshow', 'hotstar'],
-    'Health': ['doctor', 'pharmacy', 'medicine', 'hospital', 'clinic', 'gym', 'fitness', 'yoga', 'test', 'lab', 'medical', 'pharmeasy', 'cult'],
-    'Travel': ['hotel', 'stay', 'booking', 'trip', 'tour', 'vacation', 'resort', 'airbnb', 'makemytrip', 'goibibo'],
-    'Education': ['school', 'college', 'fee', 'course', 'book', 'stationery', 'udemy', 'coursera', 'tuition', 'class'],
-    'Personal Care': ['salon', 'spa', 'hair', 'groom', 'cosmetic', 'facial', 'massage'],
-    'Income': ['salary', 'bonus', 'credit', 'interest', 'dividend', 'refund'],
-    'Transfer': ['upi', 'sent', 'paid to', 'transfer', 'imps', 'neft', 'rtgs']
-};
+// Reusing robust categorization from extraction service
+import { getCategoryFromKeywords } from './extractionService';
 
 export const categorizeTransaction = (description, merchant) => {
-    const text = (description + ' ' + (merchant || '')).toLowerCase();
-
-    // Check strict categories first
-    if (text.includes('salary') || text.includes('credit')) return 'Income';
-
-    // Priority order checking
-    const priorities = ['Health', 'Travel', 'Transport', 'Utilities', 'Food', 'Groceries', 'Shopping', 'Entertainment', 'Education', 'Personal Care', 'Transfer'];
-
-    for (const cat of priorities) {
-        const keywords = CATEGORY_KEYWORDS[cat];
-        if (keywords.some(k => text.includes(k))) {
-            return cat;
-        }
-    }
-
-    return 'General';
+    return getCategoryFromKeywords(description, merchant);
 };
 
-export const addTransaction = (amount, description, type = 'debit') => {
+export const addTransaction = (amount, description, type = 'debit', manualCategory = null) => {
     const newTransaction = {
         id: Date.now().toString(),
         amount: parseFloat(amount),
         merchant: description, // Mapping description to merchant for consistency
         type,
         date: new Date().toISOString().split('T')[0],
-        // Use the passed category if valid, else re-categorize
-        category: (description?.category && description.category !== 'General') ? description.category : categorizeTransaction(description),
+        // Use manualCategory if provided, else check description object, else re-categorize
+        category: manualCategory || ((description?.category && description.category !== 'General') ? description.category : categorizeTransaction(description)),
         extractedAt: new Date().toISOString()
     };
 
@@ -183,7 +156,7 @@ export const processExtractedData = (extractedData) => {
         merchant: merchant || 'Unknown Merchant',
         type: type || 'debit',
         date: date || new Date().toISOString().split('T')[0],
-        category: categorizeTransaction(merchant || 'General'),
+        category: extractedData.category || categorizeTransaction(merchant || 'General'),
         smsText,
         extractedAt: new Date().toISOString()
     };

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { processExtractedData } from '../../services/transactionService';
+import { extractTransactionDetails } from '../../services/extractionService';
 
 const SMSExtractor = () => {
     const [smsText, setSmsText] = useState('');
@@ -11,41 +12,14 @@ const SMSExtractor = () => {
     const [error, setError] = useState('');
 
     const parseSMS = (text) => {
-        // Regex patterns for extraction
-        const amountRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)/i;
-        const merchantRegex = /(?:at|to|from)\s+([a-zA-Z0-9\s]+?)(?:\s+(?:on|via|ref|txn)|$)/i;
-        const dateRegex = /(\d{2}[-/]\d{2}(?:[-/]\d{2,4})?)/;
-        const refRegex = /(?:ref|txn|id)[:\s]+([a-z0-9]+)/i;
-        const typeRegex = /(debited|credited|deducted|payment|sent|received)/i;
-
-        const amountMatch = text.match(amountRegex);
-        const merchantMatch = text.match(merchantRegex);
-        const dateMatch = text.match(dateRegex);
-        const refMatch = text.match(refRegex);
-        const typeMatch = text.match(typeRegex);
-
-        if (!amountMatch) return null;
-
-        const amountStr = amountMatch[1].replace(/,/g, '');
-        const amount = parseFloat(amountStr);
-        let type = 'debit';
-
-        if (typeMatch) {
-            const t = typeMatch[1].toLowerCase();
-            if (['credited', 'received'].includes(t)) type = 'credit';
-        }
-
-        // Infer merchant/category if not clear
-        let merchant = merchantMatch ? merchantMatch[1].trim() : 'Unknown';
-        if (merchant.toLowerCase() === 'your account') merchant = 'Bank Transfer'; // Fix common mis-capture
+        const result = extractTransactionDetails(text);
+        if (!result || result.amount === 0) return null;
 
         return {
-            amount,
-            merchant,
-            date: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
-            ref: refMatch ? refMatch[1] : '',
-            type,
-            smsText: text
+            ...result,
+            smsText: text,
+            date: new Date().toISOString().split('T')[0], // Default to today if date not parsed (service implementation to be checked)
+            ref: '', // Ref extraction can be added to service if needed, or kept simple
         };
     };
 

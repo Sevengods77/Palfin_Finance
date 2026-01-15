@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { theme } from '../../theme/theme';
 import { addTransaction, categorizeTransaction } from '../../services/transactionService';
+import { extractTransactionDetails } from '../../services/extractionService';
 
 export default function FintelVoiceCapture({ visible, onClose }) {
   const [recording, setRecording] = useState(null);
@@ -123,39 +124,22 @@ export default function FintelVoiceCapture({ visible, onClose }) {
     }
   }
 
+  // Import at top (add this line if not present, but for now I'm replacing the function)
+  // We need to ensure imports are correct in the final file.
+
   const parseText = (text) => {
     if (!text) return;
-    const lowerText = text.toLowerCase();
 
-    // 1. Extract Amount
-    // Matches: "rs 500", "500 rs", "500"
-    const amountMatch = text.match(/(\d+(?:\.\d+)?)/);
-    const amount = amountMatch ? parseFloat(amountMatch[0]) : 0;
+    console.log('Parsing text:', text);
+    const result = extractTransactionDetails(text);
+    console.log('Parsed result:', result);
 
-    // 2. Extract Merchant (Improved)
-    // ... (keeping merchant extraction logic) ... 
-
-    // 3. Extract Category using Centralized Logic
-    // We pass the full text to the service helper
-    let category = categorizeTransaction(text);
-
-    // 3. Extract Merchant/Description
-    // heuristic: remove amount, currency keywords, phrases like "paid for", "spent on"
-    let merchant = text
-      .replace(amountMatch ? amountMatch[0] : '', '')
-      .replace(/(rs|rupees|inr|paid|spent|for|on|at|in|to|the|a|an)/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // If empty or just category name, make it descriptive
-    if (merchant.length < 3) merchant = category + ' Expense';
-
-    setParsedData({ amount, category, merchant, originalText: text });
+    setParsedData(result);
   };
 
   const handleConfirm = () => {
     if (parsedData) {
-      addTransaction(parsedData.amount, parsedData.merchant, 'debit');
+      addTransaction(parsedData.amount, parsedData.merchant, parsedData.type || 'debit', parsedData.category);
       onClose();
     }
   };

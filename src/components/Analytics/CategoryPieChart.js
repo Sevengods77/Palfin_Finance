@@ -7,27 +7,56 @@ import { getTransactions, subscribeToStore } from '../../services/transactionSer
 
 const screenWidth = Dimensions.get('window').width;
 
+const ToggleButton = ({ title, isActive, onPress }) => (
+    <TouchableOpacity
+        onPress={onPress}
+        style={[
+            styles.toggleButton,
+            isActive && styles.activeToggleButton
+        ]}
+    >
+        <Text style={[
+            styles.toggleText,
+            isActive && styles.activeToggleText
+        ]}>{title}</Text>
+    </TouchableOpacity>
+);
+
 export default function CategoryPieChart({ onClose }) {
     const [data, setData] = useState([]);
-    const [totalSpend, setTotalSpend] = useState(0);
-    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [totalValue, setTotalValue] = useState(0);
+    const [viewMode, setViewMode] = useState('expense'); // 'expense' or 'income'
+
+    // Listen for mode changes to re-process current store data if needed, 
+    // but subscribeToStore handles data updates. 
+    // We need to store raw transactions to re-filter when mode changes.
+    const [rawTransactions, setRawTransactions] = useState([]);
 
     useEffect(() => {
         const updateData = (store) => {
-            processTransactions(store.transactions);
+            setRawTransactions(store.transactions);
+            processTransactions(store.transactions, viewMode);
         };
 
         const unsubscribe = subscribeToStore(updateData);
         return () => unsubscribe();
     }, []);
 
-    const processTransactions = (transactions) => {
+    // Re-process when viewMode changes
+    useEffect(() => {
+        if (rawTransactions.length > 0) {
+            processTransactions(rawTransactions, viewMode);
+        }
+    }, [viewMode, rawTransactions]);
+
+    const processTransactions = (transactions, mode) => {
         const categoryTotals = {};
         let total = 0;
 
         transactions.forEach(tx => {
-            // Only consider debits
-            if (tx.type === 'debit') {
+            const isDebit = tx.type === 'debit';
+            // Filter based on mode
+            if ((mode === 'expense' && isDebit) || (mode === 'income' && !isDebit)) {
                 const amount = parseFloat(tx.amount);
                 const cat = tx.category || 'General';
                 categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
@@ -35,12 +64,12 @@ export default function CategoryPieChart({ onClose }) {
             }
         });
 
-        setTotalSpend(total);
+        setTotalValue(total);
 
         // Format for PieChart
-        // colors: custom palette
         const colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF',
+            '#FF9F40', '#8AC926', '#1982C4', '#6A4C93'
         ];
 
         const chartData = Object.keys(categoryTotals).map((cat, index) => ({
@@ -54,31 +83,49 @@ export default function CategoryPieChart({ onClose }) {
         setData(chartData);
     };
 
-    const handleSliceClick = (entry) => {
-        setSelectedCategory(entry);
-    };
-
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Spending by Category</Text>
+                <Text style={styles.title}>
+                    {viewMode === 'expense' ? 'Spending' : 'Income'} by Category
+                </Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                     <Text style={styles.closeText}>✕</Text>
                 </TouchableOpacity>
             </View>
 
+            <View style={styles.toggleContainer}>
+                <ToggleButton
+                    title="Expenses"
+                    isActive={viewMode === 'expense'}
+                    onPress={() => setViewMode('expense')}
+                />
+                <ToggleButton
+                    title="Income"
+                    isActive={viewMode === 'income'}
+                    onPress={() => setViewMode('income')}
+                />
+            </View>
+
             <ScrollView showsVerticalScrollIndicator={false}>
 
                 <View style={styles.summaryContainer}>
-                    <Text style={styles.totalLabel}>Total Spending</Text>
-                    <Text style={styles.totalValue}>₹{totalSpend.toFixed(2)}</Text>
+                    <Text style={styles.totalLabel}>
+                        Total {viewMode === 'expense' ? 'Spending' : 'Income'}
+                    </Text>
+                    <Text style={[
+                        styles.totalValue,
+                        { color: viewMode === 'expense' ? theme.colors.primary : '#22C55E' }
+                    ]}>
+                        ₹{totalValue.toFixed(2)}
+                    </Text>
                 </View>
 
                 {data.length > 0 ? (
                     <View style={styles.chartContainer}>
                         <PieChart
                             data={data}
-                            width={Math.min(screenWidth, 500) - 48} // Constrain to modal width (500) - padding
+                            width={Math.min(screenWidth, 500) - 48}
                             height={220}
                             chartConfig={{
                                 backgroundColor: theme.colors.surface,
@@ -90,22 +137,18 @@ export default function CategoryPieChart({ onClose }) {
                             backgroundColor={"transparent"}
                             paddingLeft={"0"}
                             center={[0, 0]}
-                            absolute // Shows absolute numbers on chart, optional
+                            absolute
                             hasLegend={true}
                         />
                     </View>
                 ) : (
-                    <Text style={styles.noData}>No transactions found.</Text>
+                    <Text style={styles.noData}>No {viewMode} transactions found.</Text>
                 )}
 
                 <Text style={styles.sectionTitle}>Details</Text>
                 <View style={styles.listContainer}>
                     {data.map((item, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={styles.listItem}
-                            onPress={() => handleSliceClick(item)}
-                        >
+                        <View key={index} style={styles.listItem}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <View style={[styles.colorDot, { backgroundColor: item.color }]} />
                                 <Text style={styles.catName}>{item.name}</Text>
@@ -113,10 +156,10 @@ export default function CategoryPieChart({ onClose }) {
                             <View style={{ alignItems: 'flex-end' }}>
                                 <Text style={styles.catAmount}>₹{item.population.toFixed(2)}</Text>
                                 <Text style={styles.catPercent}>
-                                    {totalSpend > 0 ? ((item.population / totalSpend) * 100).toFixed(1) : 0}%
+                                    {totalValue > 0 ? ((item.population / totalValue) * 100).toFixed(1) : 0}%
                                 </Text>
                             </View>
-                        </TouchableOpacity>
+                        </View>
                     ))}
                 </View>
             </ScrollView>
@@ -148,6 +191,35 @@ const styles = StyleSheet.create({
     closeText: {
         fontSize: 24,
         color: theme.colors.textSecondary,
+    },
+    toggleContainer: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.surface,
+        borderRadius: 8,
+        padding: 4,
+        marginBottom: 24,
+    },
+    toggleButton: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderRadius: 6,
+    },
+    activeToggleButton: {
+        backgroundColor: theme.colors.background,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    toggleText: {
+        color: theme.colors.textSecondary,
+        fontWeight: '600',
+    },
+    activeToggleText: {
+        color: theme.colors.text,
+        fontWeight: 'bold',
     },
     summaryContainer: {
         alignItems: 'center',
