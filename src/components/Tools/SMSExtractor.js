@@ -50,6 +50,7 @@ const SMSExtractor = () => {
     };
 
     const handleExtract = async () => {
+        setResult(null); // Clear previous result first
         if (!smsText.trim()) {
             setError('Please paste an SMS message first.');
             return;
@@ -57,7 +58,6 @@ const SMSExtractor = () => {
 
         setLoading(true);
         setError('');
-        setResult(null);
 
         try {
             // Simulate processing delay
@@ -80,6 +80,12 @@ const SMSExtractor = () => {
         }
     };
 
+    const handleTextChange = (text) => {
+        setSmsText(text);
+        if (error) setError('');
+        if (result) setResult(null);
+    };
+
     return (
         <View style={[sharedStyles.card, styles.container]}>
             <Text style={styles.title}>📱 SMS Transaction Extractor</Text>
@@ -92,7 +98,7 @@ const SMSExtractor = () => {
                 placeholder="e.g., Your A/C XXXX1234 debited with ₹500..."
                 placeholderTextColor={theme.colors.textSecondary}
                 value={smsText}
-                onChangeText={setSmsText}
+                onChangeText={handleTextChange}
             />
 
             <TouchableOpacity

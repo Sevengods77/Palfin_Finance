@@ -6,6 +6,9 @@ import { getMonthlySpend, getDashboardData, addTransaction, subscribeToStore } f
 import { getUserStats } from '../../services/gamificationService';
 import { getDailyTip } from '../../services/coachService';
 import SMSExtractor from '../Tools/SMSExtractor';
+import FintelVoiceCapture from '../Fintel/FintelVoiceCapture';
+import CategoryPieChart from '../Analytics/CategoryPieChart';
+import GoalSetting from '../Goals/GoalSetting';
 
 const StatCard = ({ title, value, subtext, color }) => (
     <View style={[sharedStyles.card, styles.statCard]}>
@@ -27,11 +30,13 @@ const ProgressBar = ({ progress }) => (
         <View style={styles.progressBackground}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.progressText}>{progress}% of monthly budget</Text>
+        <Text style={styles.progressText}>{progress.toFixed(1)}% of Goal</Text>
     </View>
 );
 
-const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
+const DashboardScreen = (props) => {
+    // Destructure props but keep access to others if needed, mostly we need user, scrollToSection, onScrollHandled, and onOpenChat
+    const { user, scrollToSection, onScrollHandled, onOpenChat } = props;
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState({
         balance: 0,
@@ -42,8 +47,12 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
     });
     const [stats, setStats] = useState({ streak: 0, points: 0 });
     const [dailyTip, setDailyTip] = useState('');
+
     const [refreshing, setRefreshing] = useState(false);
     const [showExtractor, setShowExtractor] = useState(false);
+    const [showFintel, setShowFintel] = useState(false);
+    const [showCategories, setShowCategories] = useState(false);
+    const [showGoals, setShowGoals] = useState(false);
 
     // Scrolling refs
     const scrollViewRef = useRef(null);
@@ -142,6 +151,12 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                     <Text style={sharedStyles.subtitle}>Here's your financial snapshot.</Text>
                 </View>
 
+                {/* Behavioral Coach Tip */}
+                <View style={[sharedStyles.card, styles.tipCard]}>
+                    <Text style={styles.tipTitle}>💡 Behavioral Coach</Text>
+                    <Text style={styles.tipText}>{dailyTip}</Text>
+                </View>
+
                 <View style={styles.statsGrid}>
                     <StatCard
                         title="Current Balance"
@@ -155,12 +170,24 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                         subtext="▼ 12% from last month"
                         color={theme.colors.primary}
                     />
+                    <StatCard
+                        title="Savings Rate"
+                        value={`${dashboardData.savingsRate}%`}
+                        subtext="On track for goal"
+                        color={theme.colors.accent}
+                    />
+                    <StatCard
+                        title="Streak"
+                        value={`${dashboardData.streak || 0} Days`}
+                        subtext="Tracking expenses"
+                        color="#F59E0B"
+                    />
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Budget Progress</Text>
+                    <Text style={styles.sectionHeader}>Goal Progress: {dashboardData.goalName || 'Savings'}</Text>
                     <View style={sharedStyles.card}>
-                        <ProgressBar progress={30} />
+                        <ProgressBar progress={Math.min(((dashboardData.balance || 0) / (dashboardData.goalTarget || 1)) * 100, 100)} />
                     </View>
                 </View>
 
@@ -174,10 +201,33 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
 
                     <View style={styles.featuresGrid}>
                         <FeatureCard
+                            title="Fintel Voice"
+                            icon="🎙️"
+                            onPress={() => setShowFintel(true)}
+                            isActive={showFintel}
+                        />
+                        <FeatureCard
                             title="TransExtract"
                             icon="📱"
                             onPress={() => setShowExtractor(true)}
                             isActive={showExtractor}
+                        />
+                        <FeatureCard
+                            title="View Categories"
+                            icon="🏷️"
+                            onPress={() => setShowCategories(true)}
+                            isActive={showCategories}
+                        />
+                        <FeatureCard
+                            title="Behavioral Coach"
+                            icon="🤖"
+                            onPress={onOpenChat}
+                        />
+                        <FeatureCard
+                            title="Goal Setting"
+                            icon="🎯"
+                            onPress={() => setShowGoals(true)}
+                            isActive={showGoals}
                         />
                     </View>
                 </View>
@@ -206,8 +256,42 @@ const DashboardScreen = ({ user, scrollToSection, onScrollHandled }) => {
                     </View>
                 </Modal>
 
-            </View>
-        </ScrollView>
+                {/* Fintel Voice Capture Modal (Built-in Modal) */}
+                <FintelVoiceCapture
+                    visible={showFintel}
+                    onClose={() => setShowFintel(false)}
+                />
+
+                {/* Categories Wrapper Modal */}
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showCategories}
+                    onRequestClose={() => setShowCategories(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <CategoryPieChart onClose={() => setShowCategories(false)} />
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* Goal Setting Modal */}
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showGoals}
+                    onRequestClose={() => setShowGoals(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <GoalSetting onClose={() => setShowGoals(false)} />
+                        </View>
+                    </View>
+                </Modal>
+
+            </View >
+        </ScrollView >
     );
 };
 

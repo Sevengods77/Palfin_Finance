@@ -26,8 +26,7 @@ export default function FinizeChat({ onClose, transactions = [], user = null }) 
     setMessages(m => [...m, userMsg]);
     setInput('');
     try {
-      const history = [...messages, userMsg];
-      const { response } = await getResponse(text, transactions, user, history);
+      const { response } = await getResponse(text, transactions, user);
       const botMsg = { id: `b-${Date.now()}`, from: 'finize', text: response };
       setMessages(m => [...m, botMsg]);
     } catch (e) {

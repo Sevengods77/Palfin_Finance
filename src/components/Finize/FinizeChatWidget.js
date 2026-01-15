@@ -1,80 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, Platform, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, Platform, Image, ActivityIndicator } from 'react-native';
 import { theme } from '../../theme/theme';
 import { sharedStyles } from '../../theme/sharedStyles';
 import botAvatar from '../../../assets/Finize_bot.png';
-import { getTransactions, getMonthlySpend } from '../../services/transactionService';
-import { getUserStats } from '../../services/gamificationService';
-import { getResponse as getFinizeResponse } from '../../../components/finizeService';
+// Import Gemini Service
+import { sendMessageToGemini } from '../../services/geminiService';
+import { getDashboardData } from '../../services/transactionService';
 
-const FinizeChatWidget = ({ user }) => {
-    const [isOpen, setIsOpen] = useState(false);
+const FinizeChatWidget = ({ isOpen, onClose, onOpen }) => {
     const [messages, setMessages] = useState([
-        { id: 1, text: "Hi! I'm Finize, your financial assistant. How can I help you today?", sender: 'bot' }
+        { id: 1, text: "Hi! I'm Finize, your AI financial coach. Ask me about your spending!", sender: 'bot' }
     ]);
     const [inputText, setInputText] = useState('');
-    const [isSending, setIsSending] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSend = async () => {
-        const text = inputText.trim();
-        if (!text || isSending) return;
+        if (!inputText.trim()) return;
 
-        const userMsg = { id: Date.now(), text, sender: 'user' };
+        const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
         setMessages(prev => [...prev, userMsg]);
         setInputText('');
-        setIsSending(true);
+        setIsLoading(true);
 
         try {
-            // Get latest transactions + dashboard-style metrics as context
-            const [transactions, monthlySpend, userStats] = await Promise.all([
-                getTransactions(),
-                getMonthlySpend(),
-                getUserStats(),
-            ]);
+            // Get current financial context
+            const contextStart = await getDashboardData();
 
-            // Roughly infer budget from dashboard's progress bar (65%)
-            const budgetProgress = 65;
-            const budget = budgetProgress > 0 ? monthlySpend / (budgetProgress / 100) : null;
+            // Call Gemini API
+            const reply = await sendMessageToGemini(userMsg.text, contextStart);
 
-            // Mirror the dashboard's "Total Savings" mock value
-            const savings = 8500;
-
-            const snapshot = {
-                monthlySpend,
-                budget,
-                budgetProgress,
-                savings,
-                streak: userStats?.streak,
-                points: userStats?.points,
-                level: userStats?.level,
-            };
-
-            // Build simple history format expected by finizeService
-            const history = [...messages, userMsg].map(m => ({
-                from: m.sender === 'bot' ? 'finize' : 'user',
-                text: m.text,
-            }));
-
-            const { response } = await getFinizeResponse(text, transactions, user || null, history, snapshot);
-
-            const botMsg = {
+            setMessages(prev => [...prev, { id: Date.now() + 1, text: reply, sender: 'bot' }]);
+        } catch (error) {
+            setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: response,
-                sender: 'bot',
-            };
-            setMessages(prev => [...prev, botMsg]);
-        } catch (err) {
-            console.error('Finize chat error:', err);
-            setMessages(prev => [
-                ...prev,
-                {
-                    id: Date.now() + 2,
-                    text: "Sorry, something went wrong while talking to Finize. Please try again.",
-                    sender: 'bot',
-                },
-            ]);
+                text: "⚠️ " + error.message,
+                sender: 'bot'
+            }]);
         } finally {
-            setIsSending(false);
+            setIsLoading(false);
         }
     };
 
@@ -82,7 +45,7 @@ const FinizeChatWidget = ({ user }) => {
         return (
             <TouchableOpacity
                 style={[styles.floatingButton, sharedStyles.shadow]}
-                onPress={() => setIsOpen(true)}
+                onPress={onOpen}
             >
                 <Image source={botAvatar} style={styles.avatarImage} />
             </TouchableOpacity>
@@ -94,9 +57,9 @@ const FinizeChatWidget = ({ user }) => {
             <View style={styles.header}>
                 <View style={styles.headerTitleContainer}>
                     <Image source={botAvatar} style={styles.avatarImageSmall} />
-                    <Text style={styles.headerTitle}>Finize</Text>
+                    <Text style={styles.headerTitle}>Finize AI Coach</Text>
                 </View>
-                <TouchableOpacity onPress={() => setIsOpen(false)}>
+                <TouchableOpacity onPress={onClose}>
                     <Text style={styles.closeText}>✕</Text>
                 </TouchableOpacity>
             </View>
@@ -115,6 +78,11 @@ const FinizeChatWidget = ({ user }) => {
                         </Text>
                     </View>
                 ))}
+                {isLoading && (
+                    <View style={[styles.messageBubble, styles.botBubble]}>
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                    </View>
+                )}
             </ScrollView>
 
             <View style={styles.inputArea}>
@@ -125,9 +93,14 @@ const FinizeChatWidget = ({ user }) => {
                     value={inputText}
                     onChangeText={setInputText}
                     onSubmitEditing={handleSend}
+                    editable={!isLoading}
                 />
-                <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={isSending}>
-                    <Text style={styles.sendButtonText}>{isSending ? '…' : '→'}</Text>
+                <TouchableOpacity
+                    style={[styles.sendButton, isLoading && styles.disabledButton]}
+                    onPress={handleSend}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.sendButtonText}>→</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -256,6 +229,9 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    disabledButton: {
+        backgroundColor: theme.colors.textSecondary,
     },
     sendButtonText: {
         color: theme.colors.background,

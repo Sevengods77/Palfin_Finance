@@ -1,10 +1,43 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import dashboardData from '../../dashboardData.json';
 
+const STORAGE_KEY = '@palfin_dashboard_data';
+
 // In-memory store initialized from JSON
-let store = {
+const defaultStore = {
     ...dashboardData,
-    transactions: [...dashboardData.transactions]
+    transactions: [...dashboardData.transactions],
+    totalIncome: 150000,
+    goalTarget: 100000,
+    goalName: 'Savings Goal',
+    streak: 0,
+    lastTransactionDate: null
 };
+
+let store = { ...defaultStore };
+
+const saveStore = async () => {
+    try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    } catch (e) {
+        console.error('Failed to save store', e);
+    }
+};
+
+const loadStore = async () => {
+    try {
+        const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
+        if (jsonValue != null) {
+            store = JSON.parse(jsonValue);
+            notifyListeners();
+        }
+    } catch (e) {
+        console.error('Failed to load store', e);
+    }
+};
+
+// Auto-load on module import
+setTimeout(loadStore, 0);
 
 // Observers for real-time updates
 const listeners = new Set();
@@ -28,34 +61,72 @@ export const getTransactions = () => {
     return Promise.resolve([...store.transactions]);
 };
 
+// Helper to update streak based on today vs last date
+const updateStreak = (currentStreak, lastDateStr) => {
+    if (!lastDateStr) return 1;
+
+    const today = new Date();
+    const lastDate = new Date(lastDateStr);
+
+    // Reset hours to compare dates only
+    today.setHours(0, 0, 0, 0);
+    lastDate.setHours(0, 0, 0, 0);
+
+    const diffTime = Math.abs(today - lastDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return currentStreak; // Same day, no change
+    if (diffDays === 1) return currentStreak + 1; // Consecutive day
+    return 1; // Broken streak, reset to 1 (today)
+};
+
+const calculateSavingsRate = (income, expense) => {
+    if (income <= 0) return 0;
+    return Math.max(0, Math.round(((income - expense) / income) * 100));
+};
+
+export const setGoal = (name, target) => {
+    store.goalName = name;
+    store.goalTarget = parseFloat(target) || 0;
+    saveStore();
+    notifyListeners();
+};
+
 export const getMonthlySpend = () => {
-    // In a real app, we would recalculate this from transactions if they were exhaustive.
-    // For this requirements, we trust the store's monthlyExpenses or recalculate specific period.
-    // Let's return the store value directly for consistency with the prompt's "Expense" metric.
     return Promise.resolve(store.monthlyExpenses);
 };
 
 // Simple keyword-based auto-categorization logic
-const categorizeTransaction = (description, merchant) => {
+// Robust categorization logic
+const CATEGORY_KEYWORDS = {
+    'Food': ['food', 'lunch', 'dinner', 'breakfast', 'burger', 'pizza', 'subway', 'zomato', 'swiggy', 'restaurant', 'cafe', 'coffee', 'tea', 'snacks', 'dining', 'mcdonalds', 'kfc', 'dominos', 'starbucks'],
+    'Groceries': ['grocery', 'groceries', 'bigbasket', 'blinkit', 'zepto', 'instamart', 'milk', 'fruits', 'vegetables', 'supermarket', 'mart', 'kirana', 'bread', 'egg', 'ration'],
+    'Transport': ['cab', 'uber', 'ola', 'taxi', 'auto', 'bus', 'train', 'flight', 'ticket', 'fuel', 'petrol', 'diesel', 'parking', 'toll', 'metro', 'ride', 'rapido'],
+    'Utilities': ['bill', 'electricity', 'water', 'gas', 'recharge', 'wifi', 'broadband', 'mobile', 'internet', 'dth', 'rent', 'maintenance', 'bescom', 'bwssb'],
+    'Shopping': ['shop', 'store', 'amazon', 'flipkart', 'myntra', 'ajio', 'clothes', 'shirt', 'pant', 'shoes', 'accessories', 'toy', 'gift', 'electronics', 'mall', 'decathlon', 'zara', 'h&m'],
+    'Entertainment': ['movie', 'cinema', 'film', 'netflix', 'prime', 'spotify', 'game', 'subscription', 'event', 'ticket', 'show', 'bookmyshow', 'hotstar'],
+    'Health': ['doctor', 'pharmacy', 'medicine', 'hospital', 'clinic', 'gym', 'fitness', 'yoga', 'test', 'lab', 'medical', 'pharmeasy', 'cult'],
+    'Travel': ['hotel', 'stay', 'booking', 'trip', 'tour', 'vacation', 'resort', 'airbnb', 'makemytrip', 'goibibo'],
+    'Education': ['school', 'college', 'fee', 'course', 'book', 'stationery', 'udemy', 'coursera', 'tuition', 'class'],
+    'Personal Care': ['salon', 'spa', 'hair', 'groom', 'cosmetic', 'facial', 'massage'],
+    'Income': ['salary', 'bonus', 'credit', 'interest', 'dividend', 'refund'],
+    'Transfer': ['upi', 'sent', 'paid to', 'transfer', 'imps', 'neft', 'rtgs']
+};
+
+export const categorizeTransaction = (description, merchant) => {
     const text = (description + ' ' + (merchant || '')).toLowerCase();
 
-    if (text.includes('uber') || text.includes('ola') || text.includes('fuel') || text.includes('metro')) {
-        return 'Transport';
-    }
-    if (text.includes('grocery') || text.includes('food') || text.includes('restaurant') || text.includes('swiggy') || text.includes('zomato') || text.includes('coffee')) {
-        return 'Food';
-    }
-    if (text.includes('bill') || text.includes('electricity') || text.includes('recharge') || text.includes('wifi') || text.includes('mobile')) {
-        return 'Utilities';
-    }
-    if (text.includes('movie') || text.includes('netflix') || text.includes('amazon') || text.includes('shopping')) {
-        return 'Entertainment';
-    }
-    if (text.includes('salary') || text.includes('deposit') || text.includes('credit')) {
-        return 'Income';
-    }
-    if (text.includes('upi') || text.includes('transfer')) {
-        return 'Transfer';
+    // Check strict categories first
+    if (text.includes('salary') || text.includes('credit')) return 'Income';
+
+    // Priority order checking
+    const priorities = ['Health', 'Travel', 'Transport', 'Utilities', 'Food', 'Groceries', 'Shopping', 'Entertainment', 'Education', 'Personal Care', 'Transfer'];
+
+    for (const cat of priorities) {
+        const keywords = CATEGORY_KEYWORDS[cat];
+        if (keywords.some(k => text.includes(k))) {
+            return cat;
+        }
     }
 
     return 'General';
@@ -68,7 +139,8 @@ export const addTransaction = (amount, description, type = 'debit') => {
         merchant: description, // Mapping description to merchant for consistency
         type,
         date: new Date().toISOString().split('T')[0],
-        category: categorizeTransaction(description),
+        // Use the passed category if valid, else re-categorize
+        category: (description?.category && description.category !== 'General') ? description.category : categorizeTransaction(description),
         extractedAt: new Date().toISOString()
     };
 
@@ -82,13 +154,21 @@ export const addTransaction = (amount, description, type = 'debit') => {
         store.monthlyExpenses += newTransaction.amount;
     } else {
         store.balance += newTransaction.amount;
-        // Income doesn't usually reduce monthly expenses, but could affect savings rate logic
+        store.totalIncome += newTransaction.amount;
     }
+
+    // Update Streak
+    store.streak = updateStreak(store.streak || 0, store.lastTransactionDate);
+    store.lastTransactionDate = newTransaction.date;
+
+    // Update Savings Rate
+    store.savingsRate = calculateSavingsRate(store.totalIncome, store.monthlyExpenses);
 
     // Recalculate savings rate (mock logic: balance / (balance + expenses) * 100 or specific formula)
     // For simplicity, let's just keep the hardcoded one or update slightly if needed.
     // Let's just notify for now.
 
+    saveStore();
     notifyListeners();
     return Promise.resolve(newTransaction);
 };
@@ -117,8 +197,17 @@ export const processExtractedData = (extractedData) => {
         store.monthlyExpenses += newTransaction.amount;
     } else if (newTransaction.type === 'credit') {
         store.balance += newTransaction.amount;
+        store.totalIncome += newTransaction.amount;
     }
 
+    // Update Streak
+    store.streak = updateStreak(store.streak || 0, store.lastTransactionDate);
+    store.lastTransactionDate = newTransaction.date;
+
+    // Update Savings Rate
+    store.savingsRate = calculateSavingsRate(store.totalIncome, store.monthlyExpenses);
+
+    saveStore();
     notifyListeners();
     return newTransaction;
 };
