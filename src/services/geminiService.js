@@ -1,7 +1,6 @@
 export const sendMessageToGemini = async (userMessage, contextData) => {
-    const API_KEY = 'AIzaSyA59tvcW4yCSjxmOxbjK6oDbC48bRuB0XA';
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-
+    const API_KEY = 'AIzaSyD3u3UTGiWLgMLxYtE8T8Rqc63umm8q3n8';
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`;
     const {
         balance,
         monthlyExpenses,
@@ -124,9 +123,9 @@ Remember: You're not a stern accountant, you're a supportive coach with behavior
         }],
         generationConfig: {
             temperature: 0.9, // More creative/quirky
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 250, // Keep responses concise
+            topK: 80,
+            topP: 0.96,
+            maxOutputTokens: 2048, // Keep responses concise
         }
     };
 

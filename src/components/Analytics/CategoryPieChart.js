@@ -78,7 +78,7 @@ export default function CategoryPieChart({ onClose }) {
                     <View style={styles.chartContainer}>
                         <PieChart
                             data={data}
-                            width={screenWidth - 32}
+                            width={Math.min(screenWidth, 500) - 48} // Constrain to modal width (500) - padding
                             height={220}
                             chartConfig={{
                                 backgroundColor: theme.colors.surface,
@@ -88,8 +88,8 @@ export default function CategoryPieChart({ onClose }) {
                             }}
                             accessor={"population"}
                             backgroundColor={"transparent"}
-                            paddingLeft={"15"}
-                            center={[10, 0]}
+                            paddingLeft={"0"}
+                            center={[0, 0]}
                             absolute // Shows absolute numbers on chart, optional
                             hasLegend={true}
                         />
