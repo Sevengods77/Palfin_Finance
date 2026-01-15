@@ -16,7 +16,7 @@ import SignupModal from './src/components/Auth/SignupModal';
 import FinizeChatWidget from './src/components/Finize/FinizeChatWidget';
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Quintessential': 'https://fonts.gstatic.com/s/quintessential/v20/human-quintessential.woff2', // Direct Google Fonts URL for Web/Standard
   });
 
@@ -24,6 +24,7 @@ export default function App() {
   const [route, setRoute] = useState('home'); // 'home', 'dashboard', 'tools', 'history'
   const [loginVisible, setLoginVisible] = useState(false);
   const [signupVisible, setSignupVisible] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [targetSection, setTargetSection] = useState(null); // For scrolling to sections
 
@@ -31,17 +32,32 @@ export default function App() {
   const toolsRef = useRef(null);
 
   useEffect(() => {
+    let mounted = true;
+
+    // Safety timeout to ensure app doesn't hang on loading
+    const loadingTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Initial loading timed out, forcing render');
+        setLoading(false);
+      }
+    }, 4000); // 4 seconds max wait
+
     // Initialize session
     getInitialSession().then(({ session }) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
         setRoute('dashboard');
       }
       setLoading(false);
+    }).catch(err => {
+      console.warn('Session init error:', err);
+      if (mounted) setLoading(false);
     });
 
     // Subscribe to auth changes
     const subscription = subscribeAuthChange((session) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
         setRoute('dashboard');
@@ -53,7 +69,9 @@ export default function App() {
     });
 
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
+      clearTimeout(loadingTimeout);
     };
   }, []);
 
@@ -120,8 +138,7 @@ export default function App() {
   const [toolsY, setToolsY] = useState(0);
 
   const renderContent = () => {
-    // Only block on auth loading; don't block the whole UI if the web font fails to load.
-    if (loading) {
+    if (loading || (!fontsLoaded && !fontError)) {
       return (
         <View style={[sharedStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -138,6 +155,7 @@ export default function App() {
           user={user}
           scrollToSection={targetSection}
           onScrollHandled={() => setTargetSection(null)}
+          onOpenChat={() => setIsChatOpen(true)}
         />
       );
     } else {
@@ -188,7 +206,11 @@ export default function App() {
         {renderContent()}
       </View>
 
-      <FinizeChatWidget />
+      <FinizeChatWidget
+        isOpen={isChatOpen}
+        onOpen={() => setIsChatOpen(true)}
+        onClose={() => setIsChatOpen(false)}
+      />
 
       <LoginModal
         visible={loginVisible}
@@ -217,10 +239,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    ...Platform.select({
+      web: {
+        height: '100vh',
+        overflow: 'hidden', // Prevent double scrollbars
+      },
+    }),
   },
   contentContainer: {
     flex: 1,
     position: 'relative',
+    // Ensure content takes width
+    width: '100%',
   },
 });
 
